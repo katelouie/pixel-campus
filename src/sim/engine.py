@@ -291,7 +291,7 @@ class GameState:
                 return s
         return None
 
-    def get_student_by_id(self, student_id: int) -> Student | None:
+    def get_student_by_id(self, student_id: int | None) -> Student | None:
         for s in self.students:
             if s.student_id == student_id:
                 return s
