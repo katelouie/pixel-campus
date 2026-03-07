@@ -13,7 +13,7 @@ authors = [{ name = "Kate Louie", email = "katehlouie@gmail.com" }]
 
 [project.optional-dependencies]
 gui = ["arcade>=3.0"]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-cov", "ruff"]
 dist = ["pyinstaller"]
 
 [project.scripts]

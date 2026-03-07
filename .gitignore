@@ -9,6 +9,7 @@ build/
 # Virtual env
 .venv/
 venv/
+.python-version
 
 # IDE
 .vscode/
