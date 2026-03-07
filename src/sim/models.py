@@ -74,8 +74,10 @@ class Room:
 
     name: str
     skill_boost: Skill
-    boost_per_tick: int = 10  # base points added to relevant skill per activity tick
-    mood_per_tick: int = 5  # base mood delta per activity tick
+    boost_per_tick: float = (
+        10.0  # base points added to relevant skill per activity tick
+    )
+    mood_per_tick: float = 5.0  # base mood delta per activity tick
     capacity: int = 8
     description: str = ""
 
@@ -99,8 +101,8 @@ class Student:
     student_id: int
 
     # Stats (0-100 scale)
-    mood_value: int = 70
-    energy: int = 100
+    mood_value: float = 70.0
+    energy: float = 100.0
 
     # Skills (0-100 scale)
     skills: dict[Skill, float] = field(default_factory=dict)
