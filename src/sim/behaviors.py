@@ -8,7 +8,7 @@ The engine calls this for every student every tick.
 import random
 from typing import TYPE_CHECKING
 
-from models import SKILL_TO_ACTIVITY, Room, Skill, Student, StudentState
+from .models import SKILL_TO_ACTIVITY, Room, Skill, Student, StudentState
 
 if TYPE_CHECKING:
     from .engine import GameState
@@ -56,7 +56,7 @@ def start_activity(student: Student, room: Room) -> str:
     return f"{student.name} starts {activity.value} in the {room.name}."
 
 
-def process_student(student: Student, state: GameState) -> list[str]:
+def process_student(student: Student, state: "GameState") -> list[str]:
     """Advance 1 student by 1 tick. Returns log messages.
 
     Called by the engine for every student * every tick.
@@ -96,7 +96,7 @@ def process_student(student: Student, state: GameState) -> list[str]:
 # ---------------
 
 
-def _process_idle(student: Student, state: GameState) -> list[str]:
+def _process_idle(student: Student, state: "GameState") -> list[str]:
     """Idle students might decide to do something on their own."""
     log: list[str] = []
 
@@ -158,7 +158,7 @@ def _process_activity(student: Student) -> list[str]:
     return log
 
 
-def _process_chatting(student: Student, state: GameState) -> list[str]:
+def _process_chatting(student: Student, state: "GameState") -> list[str]:
     """Process a 1-on-1 chat tick.
 
     Both participants tick together but we only process from 1 perspective (lower ID)
@@ -213,7 +213,7 @@ def _process_resting(student: Student) -> list[str]:
 # --------------------
 
 
-def _autonomous_decision(student: Student, state: GameState) -> list[str]:
+def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
     """A student decides to do something on their own -- AI decision."""
     log: list[str] = []
 
@@ -245,7 +245,7 @@ def _autonomous_decision(student: Student, state: GameState) -> list[str]:
 # ----------------
 
 
-def _find_student(state: GameState, student_id: int | None) -> Student | None:
+def _find_student(state: "GameState", student_id: int | None) -> Student | None:
     """Look up a student by ID."""
     if student_id is None:
         return None

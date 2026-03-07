@@ -57,7 +57,7 @@ EVENTS: list[SchoolEvent] = [
 ]
 
 
-def check_for_event(state: GameState) -> SchoolEvent | None:
+def check_for_event(state: "GameState") -> SchoolEvent | None:
     """Check if an event triggers on this tick.
 
     Events fire at the start of every 7th day (on tick 0).
@@ -70,7 +70,7 @@ def check_for_event(state: GameState) -> SchoolEvent | None:
     return None
 
 
-def resolve_event(state: GameState, event: SchoolEvent) -> list[str]:
+def resolve_event(state: "GameState", event: SchoolEvent) -> list[str]:
     """Run an event. Returns log messages."""
     log: list[str] = []
     log.append(f"EVENT: {event.name}! - {event.description}")
