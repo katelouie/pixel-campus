@@ -20,19 +20,3 @@ python -m src.main_cli
 # Run tests
 pytest
 ```
-
-## Project Structure
-
-```txt
-src/
-├── sim/          # Pure simulation logic (no display code)
-│   ├── models.py # Student, Room, Relationship dataclasses
-│   ├── engine.py # GameState, day simulation, assignment
-│   ├── events.py # School events (Prom, Finals, Art Show...)
-│   ├── journal.py# Journal entry generation
-│   └── social.py # Relationship system, compatibility
-├── ui/           # Arcade visual layer (Phase 3+)
-├── data/         # Static game data (JSON configs)
-├── main_cli.py   # CLI testing harness
-└── main_arcade.py# Arcade graphical client
-```
