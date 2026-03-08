@@ -1,4 +1,4 @@
-"""Social system. Relationships, compatability, interactions.
+"""Social system. Relationships, compatibility, interactions.
 
 Students who share space build affinity. That affinity crosses number thresholds to
 level up relationships
@@ -64,7 +64,7 @@ TEXT_TEMPLATES: dict[FriendshipLevel | RomanceLevel, list[str]] = {
 }
 
 
-def compatability(a: Student, b: Student) -> float:
+def compatibility(a: Student, b: Student) -> float:
     """Preference overlap score (0-100)."""
     if not a.preferences or not b.preferences:
         return 0.5
@@ -94,7 +94,7 @@ def get_or_create_friendship(
 
 def maybe_interact(a: Student, b: Student, rel: Friendship) -> str | None:
     """Resolve a social interaction. Updates affinity/level, returns flavor text."""
-    compat = compatability(a, b)
+    compat = compatibility(a, b)
     gain = int(random.uniform(2, 6) * compat)
     rel.affinity = min(100, rel.affinity + gain)
 

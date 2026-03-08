@@ -144,7 +144,8 @@ class GameState:
 
         Useful for 'skip day'. Returns all accumulated log messages."""
         all_logs: list[str] = []
-        while not self.clock.is_day_over:
+        starting_day = self.clock.day
+        while self.clock.day == starting_day:
             all_logs.extend(self.tick())
         return all_logs
 
@@ -211,8 +212,8 @@ class GameState:
         """Make two students start to chat."""
         # Don't interrupt their activities (except idling)
         if a.state != StudentState.IDLE or b.state != StudentState.IDLE:
-            # Allow interrupt (small chance - 15%)
-            if random.random() < 0.15:
+            # Small chance (15%) to interrupt their activity for a chat
+            if random.random() > 0.15:
                 return
 
         rel = get_or_create_friendship(self.friendships, a, b)
@@ -277,8 +278,13 @@ class GameState:
     def _calculate_day_points(self) -> int:
         if not self.students:
             return 0
-        avg_mood = sum(s.mood_value for s in self.students) / len(self.students)
-        return int(avg_mood / 10)
+        n = len(self.students)
+        avg_mood = sum(s.mood_value for s in self.students) / n
+        avg_skill = sum(
+            sum(s.skills.values()) / len(s.skills) for s in self.students
+        ) / n
+        # Mood contributes base points, skill growth adds bonus
+        return int(avg_mood / 10 + avg_skill / 5)
 
     # ----------------
     # LOOKUP FUNCTIONS

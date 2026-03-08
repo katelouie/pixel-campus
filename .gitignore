@@ -26,3 +26,10 @@ saves/*.pkl
 *.app
 *.exe
 *.dmg
+
+# Development files
+planning/
+
+# Asset packs (full downloaded packs, too large for git)
+# Only the specific files the game uses should be in assets/sprites/ and assets/audio/
+assets/packs/

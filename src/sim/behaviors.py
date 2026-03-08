@@ -176,7 +176,7 @@ def _process_chatting(student: Student, state: "GameState") -> list[str]:
     student.activity_ticks_left -= 1
 
     # Both partners get a small social/mood boost
-    partner = _find_student(state, student.chat_partner_id)
+    partner = state.get_student_by_id(student.chat_partner_id)
     if partner:
         for person in [student, partner]:
             person.mood_value += random.uniform(0.5, 1.5)
@@ -240,16 +240,3 @@ def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
     return log
 
 
-# ----------------
-# HELPER FUNCTIONS
-# ----------------
-
-
-def _find_student(state: "GameState", student_id: int | None) -> Student | None:
-    """Look up a student by ID."""
-    if student_id is None:
-        return None
-    for s in state.students:
-        if s.student_id == student_id:
-            return s
-    return None
