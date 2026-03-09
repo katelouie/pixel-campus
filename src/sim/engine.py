@@ -9,9 +9,16 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .academics import (
+    Subject,
+    calculate_report_card_points,
+    create_default_grades,
+    tick_all_grades,
+)
 from .behaviors import process_student, send_to_room
 from .clock import TICKS_PER_DAY, GameClock
-from .events import check_for_event, resolve_event
+from .defs import GameDefs, ScenarioConfig
+from .events import SchoolEvent, check_for_event, resolve_event
 from .journal import generate_journal_entry
 from .models import (
     Friendship,
@@ -24,14 +31,23 @@ from .models import (
     Student,
     StudentState,
 )
+from .needs import NeedType, satisfy_need
 from .social import get_or_create_friendship, maybe_interact
+from .thoughts import (
+    add_thought,
+    thought_exhausted,
+    thought_failing_subject,
+    thought_grades_improving,
+    thought_great_report_card,
+    thought_slept_well,
+)
 
 DEFAULT_ROOMS: list[Room] = [
     Room(
         name="Library",
         skill_boost=Skill.ACADEMICS,
         boost_per_tick=1.5,
-        mood_per_tick=0.4,
+        needs_satisfied={"academics": 2.0, "fun": -0.3},
         description="Quiet study spot. Academics soar, but restless students get bored.",
         position=(0, 0),
     ),
@@ -39,7 +55,7 @@ DEFAULT_ROOMS: list[Room] = [
         name="Art Room",
         skill_boost=Skill.CREATIVITY,
         boost_per_tick=1.5,
-        mood_per_tick=0.7,
+        needs_satisfied={"creativity": 2.0, "fun": 1.0},
         description="Paints, clay, and self-expression.",
         position=(2, 0),
     ),
@@ -47,7 +63,7 @@ DEFAULT_ROOMS: list[Room] = [
         name="Gym",
         skill_boost=Skill.ATHLETICS,
         boost_per_tick=1.5,
-        mood_per_tick=0.5,
+        needs_satisfied={"athletics": 2.0, "rest": -0.5},
         description="Hoops, laps, and pickup games.",
         position=(0, 2),
     ),
@@ -55,7 +71,7 @@ DEFAULT_ROOMS: list[Room] = [
         name="Cafeteria",
         skill_boost=Skill.SOCIAL,
         boost_per_tick=1.0,
-        mood_per_tick=1.0,
+        needs_satisfied={"social": 1.5, "fun": 1.0},
         description="Lunch tables and gossip. Everyone's mood lifts. Drama brews.",
         position=(2, 2),
     ),
@@ -72,6 +88,8 @@ DEFAULT_NAMES: list[str] = [
     "Rowan",
 ]
 
+REPORT_CARD_INTERVAL: int = 7  # days between report cards
+
 
 @dataclass
 class GameState:
@@ -87,26 +105,123 @@ class GameState:
     friendships: dict[tuple[int, int], Friendship] = field(default_factory=dict)
     romances: dict[tuple[int, int], Romance] = field(default_factory=dict)
 
+    # Scenario configuration (drives game parameters)
+    scenario: ScenarioConfig = field(default_factory=ScenarioConfig)
+
     # Messages generated this tick
     tick_log: list[str] = field(default_factory=list)
 
     @classmethod
-    def new_game(cls, num_students: int = 8) -> "GameState":
-        """Create a fresh game with default settings."""
-        names = random.sample(DEFAULT_NAMES, min(num_students, len(DEFAULT_NAMES)))
-        while len(names) < num_students:
-            # Fill out the rest of the list with placeholder names
+    def new_game(
+        cls,
+        num_students: int | None = None,
+        data_dir: Path | None = None,
+        scenario_path: Path | None = None,
+    ) -> "GameState":
+        """Create a fresh game.
+
+        Loads scenario config and data definitions from JSON.
+        Falls back to hardcoded defaults if files are missing.
+
+        Args:
+            num_students: Override the scenario's student count.
+            data_dir: Override the data directory.
+            scenario_path: Path to a scenario JSON file. If None, uses
+                the default high_school.json if it exists.
+        """
+        # Try default scenario path if none provided
+        effective_data_dir = data_dir or (
+            Path(__file__).resolve().parent.parent / "data"
+        )
+        if scenario_path is None:
+            default_scenario = effective_data_dir / "scenarios" / "high_school.json"
+            if default_scenario.exists():
+                scenario_path = default_scenario
+
+        # Load data definitions (including scenario config)
+        defs = GameDefs.load(data_dir, scenario_path=scenario_path)
+        scenario = defs.scenario
+
+        # Use loaded rooms or fall back to hardcoded defaults
+        rooms = defs.rooms if defs.rooms else list(DEFAULT_ROOMS)
+
+        # Use loaded events or fall back to hardcoded defaults
+        if defs.events:
+            from . import events as events_module
+            events_module.EVENTS = defs.events
+
+        # Student count: explicit param > scenario > default 8
+        actual_num_students = num_students or scenario.num_students
+
+        # Student names: scenario > hardcoded defaults
+        name_pool = scenario.student_names if scenario.student_names else DEFAULT_NAMES
+        names = random.sample(name_pool, min(actual_num_students, len(name_pool)))
+        while len(names) < actual_num_students:
             names.append(f"Student {len(names) + 1}")
 
-        students = [Student(name=name, student_id=i) for i, name in enumerate(names)]
+        # Build the trait pool for random assignment
+        available_traits = defs.traits if defs.traits else []
 
-        state = cls(students=students, rooms=list(DEFAULT_ROOMS))
+        students = []
+        for i, name in enumerate(names):
+            student = Student(name=name, student_id=i)
 
-        # Start the day with all students in the cafeteria
-        cafeteria = state.get_room_by_name("Cafeteria")
-        if cafeteria:
+            # Assign 1-2 random traits (if available)
+            if available_traits:
+                num_traits = random.choice([1, 1, 2])  # 2/3 chance of 1, 1/3 of 2
+                student.traits = random.sample(
+                    available_traits, min(num_traits, len(available_traits))
+                )
+
+            # Initialize grades (using class defs baseline if available)
+            student.grades = create_default_grades()
+            if defs.classes:
+                for class_def in defs.classes:
+                    try:
+                        subj = Subject(class_def["subject"])
+                        if subj in student.grades:
+                            baseline = class_def.get("baseline", 72)
+                            student.grades[subj].value = float(baseline)
+                            student.grades[subj].baseline = float(baseline)
+                    except (ValueError, KeyError):
+                        pass
+
+            # Apply trait grade baseline modifiers
+            if student.traits:
+                from .traits import combined_grade_baseline_offset
+                for subj, grade in student.grades.items():
+                    offset = combined_grade_baseline_offset(student.traits, subj.value)
+                    if offset:
+                        grade.baseline += offset
+                        grade.value += offset
+                        grade.clamp()
+
+            # Start with decent rest and fun (just woke up, new school!)
+            student.needs[NeedType.REST].value = 80.0
+            student.needs[NeedType.FUN].value = 60.0
+            student.needs[NeedType.SOCIAL].value = 50.0
+            students.append(student)
+
+        # Create the game state with scenario config
+        clock = GameClock(ticks_per_day=scenario.ticks_per_day)
+        state = cls(
+            students=students,
+            rooms=rooms,
+            clock=clock,
+            graduation_target=scenario.graduation_target,
+            scenario=scenario,
+        )
+
+        # Store loaded social text for use by social.py
+        if defs.social_text:
+            from . import social as social_module
+            social_module.load_text_from_defs(defs.social_text)
+
+        # Start the day with all students in the starting room
+        start_room = state.get_room_by_name(scenario.starting_room)
+        if start_room:
             for s in students:
-                s.location = cafeteria
+                s.location = start_room
 
         return state
 
@@ -121,6 +236,9 @@ class GameState:
         for student in self.students:
             messages = process_student(student, self)
             self.tick_log.extend(messages)
+
+            # Tick grades (drift + decay)
+            tick_all_grades(student.grades)
 
         # Check for spontaneous social interactions
         self._process_social_encounters()
@@ -140,9 +258,7 @@ class GameState:
         return self.tick_log
 
     def run_until_day_end(self) -> list[str]:
-        """Run ticks until the current day ends.
-
-        Useful for 'skip day'. Returns all accumulated log messages."""
+        """Run ticks until the current day ends."""
         all_logs: list[str] = []
         starting_day = self.clock.day
         while self.clock.day == starting_day:
@@ -190,29 +306,24 @@ class GameState:
     # ------
 
     def _process_social_encounters(self) -> None:
-        """Students in the same room who are idle or doing activities might start
-        chatting."""
+        """Students in the same room who are idle or doing activities might chat."""
         for room in self.rooms:
-            # Find students in this room (not traveling)
             present = [
                 s
                 for s in self.students
                 if s.location == room
                 and s.state not in (StudentState.TRAVELING, StudentState.CHATTING)
             ]
-            if len(present) < 2:  # Only 1 person in the room
+            if len(present) < 2:
                 continue
-            # Set small chance per pair per tick
             for i, a in enumerate(present):
                 for b in present[i + 1 :]:
-                    if random.random() < 0.03:  # 3% chance
+                    if random.random() < 0.03:
                         self._start_chat(a, b, room)
 
     def _start_chat(self, a: Student, b: Student, room: Room) -> None:
         """Make two students start to chat."""
-        # Don't interrupt their activities (except idling)
         if a.state != StudentState.IDLE or b.state != StudentState.IDLE:
-            # Small chance (15%) to interrupt their activity for a chat
             if random.random() > 0.15:
                 return
 
@@ -221,7 +332,7 @@ class GameState:
 
         for person in [a, b]:
             person.state = StudentState.CHATTING
-            duration = random.randint(2, 5)  # 20–50 game minutes
+            duration = random.randint(2, 5)
             person.activity_ticks_left = duration
         a.chat_partner_id = b.student_id
         b.chat_partner_id = a.student_id
@@ -234,16 +345,23 @@ class GameState:
     # -----------
 
     def _end_of_day(self) -> list[str]:
-        """Process end-of-day: tally points, generate journals, reset."""
+        """Process end-of-day: tally points, report cards, generate journals, reset."""
         log: list[str] = []
         log.append(f"Day {self.clock.day} is over!")
 
         day_points = self._calculate_day_points()
         self.total_points += day_points
         log.append(
-            f"Day earned {day_points} points. Total: {self.total_points}/{self.graduation_target}"
+            f"Day earned {day_points} points. "
+            f"Total: {self.total_points}/{self.graduation_target}"
         )
 
+        # Report card every N days (from scenario config)
+        interval = self.scenario.report_card_interval
+        if self.clock.day > 1 and self.clock.day % interval == 0:
+            log.extend(self._report_card())
+
+        # Journal entries
         for student in self.students:
             if random.random() < 0.4:
                 entry = generate_journal_entry(student, self.clock.day)
@@ -253,15 +371,28 @@ class GameState:
         if self.total_points >= self.graduation_target:
             log.append("GRADUATION!! Your students made it!")
 
-        # Reset all
+        # Reset for new day
         for student in self.students:
+            # Sleep quality thoughts (before we reset needs)
+            if student.needs[NeedType.REST].value > 70:
+                add_thought(student.thoughts, thought_slept_well())
+            elif student.needs[NeedType.REST].value < 20:
+                add_thought(student.thoughts, thought_exhausted())
+
             student.state = StudentState.IDLE
             student.destination = None
             student.travel_ticks_left = 0
             student.activity_ticks_left = 0
             student.chat_partner_id = None
-            # Recover energy overnight
-            student.energy = min(100, student.energy + random.randint(30, 50))
+
+            # Overnight recovery (amounts from scenario config)
+            sc = self.scenario
+            satisfy_need(student.needs, NeedType.REST, random.uniform(*sc.rest_recovery))
+            satisfy_need(student.needs, NeedType.FUN, random.uniform(*sc.fun_recovery))
+            satisfy_need(student.needs, NeedType.SOCIAL, random.uniform(*sc.social_recovery))
+            satisfy_need(student.needs, NeedType.ACADEMICS, random.uniform(*sc.minor_recovery))
+            satisfy_need(student.needs, NeedType.CREATIVITY, random.uniform(*sc.minor_recovery))
+            satisfy_need(student.needs, NeedType.ATHLETICS, random.uniform(*sc.minor_recovery))
 
         # Move to next day
         self.clock.new_day()
@@ -275,7 +406,53 @@ class GameState:
         log.append(f"Day {self.clock.day} begins! ({self.clock.time_str})")
         return log
 
+    def _report_card(self) -> list[str]:
+        """Issue report cards for all students. Returns log messages."""
+        log: list[str] = []
+        log.append("REPORT CARDS are in!")
+
+        for student in self.students:
+            points = calculate_report_card_points(student.grades)
+            self.total_points += points
+
+            # Build grade summary
+            grades_str = ", ".join(
+                f"{subj.value.capitalize()}: {student.grades[subj].letter}"
+                for subj in Subject
+                if subj in student.grades
+            )
+            sign = "+" if points >= 0 else ""
+            log.append(f"  {student.name}: {grades_str} ({sign}{points} pts)")
+
+            # Generate thoughts from grades
+            all_good = True
+            has_failing = False
+            for subj, grade in student.grades.items():
+                if grade.letter == "F":
+                    has_failing = True
+                    all_good = False
+                    add_thought(
+                        student.thoughts,
+                        thought_failing_subject(subj.value.capitalize()),
+                    )
+                elif grade.letter not in ("A", "B"):
+                    all_good = False
+
+            if all_good and student.grades:
+                add_thought(student.thoughts, thought_great_report_card())
+
+            # Check for improvement (compare effective grade to baseline)
+            improving = any(
+                grade.effective > grade.baseline + 5
+                for grade in student.grades.values()
+            )
+            if improving and not has_failing:
+                add_thought(student.thoughts, thought_grades_improving())
+
+        return log
+
     def _calculate_day_points(self) -> int:
+        """Daily points from average mood and skill growth."""
         if not self.students:
             return 0
         n = len(self.students)
@@ -283,7 +460,6 @@ class GameState:
         avg_skill = sum(
             sum(s.skills.values()) / len(s.skills) for s in self.students
         ) / n
-        # Mood contributes base points, skill growth adds bonus
         return int(avg_mood / 10 + avg_skill / 5)
 
     # ----------------

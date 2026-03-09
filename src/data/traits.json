@@ -1,0 +1,89 @@
+[
+  {
+    "name": "Bookworm",
+    "description": "Loves studying. Academic need decays slower, social need decays faster.",
+    "need_modifiers": {
+      "academics": {"decay_mult": 0.5, "satisfy_mult": 1.5},
+      "social": {"decay_mult": 1.3}
+    },
+    "thought_modifiers": {"academic": 1.5},
+    "skill_multipliers": {"academics": 1.3, "athletics": 0.7},
+    "grade_baseline_modifiers": {"math": 7, "english": 7, "science": 7, "art": -3, "pe": -5}
+  },
+  {
+    "name": "Social Butterfly",
+    "description": "Thrives around people. Social need decays fast but fills fast too.",
+    "need_modifiers": {
+      "social": {"decay_mult": 1.5, "satisfy_mult": 2.0},
+      "rest": {"decay_mult": 0.8}
+    },
+    "thought_modifiers": {"social": 1.5},
+    "skill_multipliers": {"social": 1.3},
+    "grade_baseline_modifiers": {"english": 3}
+  },
+  {
+    "name": "Loner",
+    "description": "Prefers solitude. Social need decays slowly. Thrives in creative work.",
+    "need_modifiers": {
+      "social": {"decay_mult": 0.3},
+      "creativity": {"satisfy_mult": 1.3}
+    },
+    "thought_modifiers": {"social": 0.5},
+    "skill_multipliers": {"creativity": 1.2},
+    "grade_baseline_modifiers": {"art": 5}
+  },
+  {
+    "name": "Class Clown",
+    "description": "Everything is more fun but academics suffer.",
+    "need_modifiers": {
+      "fun": {"decay_mult": 0.6, "satisfy_mult": 1.5},
+      "academics": {"satisfy_mult": 0.6}
+    },
+    "thought_modifiers": {},
+    "skill_multipliers": {"social": 1.2, "academics": 0.6},
+    "grade_baseline_modifiers": {"math": -5, "science": -5, "english": -3}
+  },
+  {
+    "name": "Overachiever",
+    "description": "Driven to excel. Big mood boosts from success, big crashes from failure.",
+    "need_modifiers": {
+      "academics": {"decay_mult": 1.3, "satisfy_mult": 1.5}
+    },
+    "thought_modifiers": {"_positive": 1.5, "_negative": 1.5},
+    "skill_multipliers": {"academics": 1.4},
+    "grade_baseline_modifiers": {"math": 5, "english": 5, "science": 5}
+  },
+  {
+    "name": "Slacker",
+    "description": "Chill vibes. Needs decay slowly but skills grow slower too.",
+    "need_modifiers": {
+      "fun": {"decay_mult": 0.5},
+      "rest": {"decay_mult": 0.5},
+      "academics": {"decay_mult": 0.5}
+    },
+    "thought_modifiers": {"_positive": 0.7, "_negative": 0.7},
+    "skill_multipliers": {"academics": 0.6, "athletics": 0.6, "creativity": 0.8},
+    "grade_baseline_modifiers": {"math": -7, "english": -7, "science": -7, "art": -3, "pe": -3, "music": -3}
+  },
+  {
+    "name": "Jock",
+    "description": "Lives for sports. Athletics need fills fast, academic skills grow slower.",
+    "need_modifiers": {
+      "athletics": {"decay_mult": 1.3, "satisfy_mult": 2.0},
+      "fun": {"satisfy_mult": 1.3}
+    },
+    "thought_modifiers": {"event": 1.3},
+    "skill_multipliers": {"athletics": 1.5, "academics": 0.7},
+    "grade_baseline_modifiers": {"pe": 10, "math": -5, "science": -3}
+  },
+  {
+    "name": "Artist",
+    "description": "Creative soul. Thrives in the art room, struggles with structure.",
+    "need_modifiers": {
+      "creativity": {"decay_mult": 1.3, "satisfy_mult": 2.0}
+    },
+    "thought_modifiers": {"activity": 1.2},
+    "skill_multipliers": {"creativity": 1.5, "academics": 0.8},
+    "grade_baseline_modifiers": {"art": 10, "music": 5, "math": -5}
+  }
+]

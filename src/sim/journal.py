@@ -1,6 +1,8 @@
 """Journal system where students write about their feelings.
 
 Reading journals reveals hidden preferences and hints about what a student needs to be happy.
+If a student has active thoughts, the journal entry is driven by the strongest thought.
+Otherwise, falls back to mood-based templates.
 """
 
 import random
@@ -33,9 +35,45 @@ TEXT_TEMPLATES: dict[Mood, list] = {
     ],
 }
 
+# Templates driven by thought categories -- used when a strong thought is active
+THOUGHT_JOURNAL_TEMPLATES: dict[str, list[str]] = {
+    "event": [
+        "Can't stop thinking about the {thought}.",
+        "The {thought} is still on my mind.",
+    ],
+    "social": [
+        "{thought} I'm still smiling about it.",
+        "Thinking about {thought}",
+    ],
+    "academic": [
+        "{thought} School stuff is really on my mind.",
+        "Report cards came back... {thought}",
+    ],
+    "activity": [
+        "{thought} It's the little things.",
+        "{thought}",
+    ],
+    "rest": [
+        "{thought} My body is telling me something.",
+        "{thought}",
+    ],
+}
+
 
 def generate_journal_entry(student: Student, day: int) -> str:
-    """Generate a journal entry reflecting the student's current state."""
+    """Generate a journal entry reflecting the student's current state.
+
+    If the student has active thoughts, picks the strongest one and writes about it.
+    Otherwise, falls back to mood-based templates.
+    """
+    # Try thought-driven entry first
+    if student.thoughts:
+        strongest = max(student.thoughts, key=lambda t: abs(t.mood_effect))
+        templates = THOUGHT_JOURNAL_TEMPLATES.get(strongest.category)
+        if templates:
+            return random.choice(templates).format(thought=strongest.label)
+
+    # Fallback: mood-based entry
     pool = TEXT_TEMPLATES[student.mood]
 
     if student.location:

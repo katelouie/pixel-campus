@@ -1,0 +1,24 @@
+{
+  "name": "High School",
+  "description": "Four years of drama, classes, and growing up.",
+  "num_students": 8,
+  "graduation_target": 800,
+  "ticks_per_day": 84,
+  "report_card_interval": 7,
+  "rooms_file": "rooms.json",
+  "events_file": "events.json",
+  "traits_file": "traits.json",
+  "classes_file": "classes.json",
+  "social_text_file": "social_text.json",
+  "starting_room": "Cafeteria",
+  "day_reset": {
+    "rest_recovery": [35, 55],
+    "fun_recovery": [10, 20],
+    "social_recovery": [8, 15],
+    "minor_recovery": [3, 8]
+  },
+  "student_names": [
+    "Alex", "Jordan", "Casey", "Morgan",
+    "Riley", "Quinn", "Sage", "Rowan"
+  ]
+}

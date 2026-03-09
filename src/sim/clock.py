@@ -1,12 +1,13 @@
 """Game clock -- translates ticks into real-world time.
 
-1 time = 10 in-game minutes.
-School day: 8am (tick 0) to 10pm (tick 84).
+1 tick = 10 in-game minutes.
+School day: 8am (tick 0) to 10pm (tick 84) by default.
+Ticks per day is configurable via scenario settings.
 """
 
 from dataclasses import dataclass
 
-TICKS_PER_DAY: int = 84  # 14 hours * 6 ticks/hour
+TICKS_PER_DAY: int = 84  # 14 hours * 6 ticks/hour (default)
 MINUTES_PER_TICK: int = 10
 DAY_START_HOUR: int = 8  # 8:00 AM
 
@@ -17,6 +18,7 @@ class GameClock:
 
     day: int = 1
     tick: int = 0  # Start of day
+    ticks_per_day: int = TICKS_PER_DAY  # configurable per scenario
 
     @property
     def minutes_elapsed(self) -> int:
@@ -47,7 +49,7 @@ class GameClock:
 
     @property
     def is_day_over(self) -> bool:
-        return self.tick >= TICKS_PER_DAY
+        return self.tick >= self.ticks_per_day
 
     def advance(self) -> bool:
         """Advance one tick. Returns True if the day just ended."""
@@ -62,4 +64,4 @@ class GameClock:
     @property
     def day_progress(self) -> float:
         """0.0 to 1.0. How far through the day it is."""
-        return self.tick / TICKS_PER_DAY
+        return self.tick / self.ticks_per_day

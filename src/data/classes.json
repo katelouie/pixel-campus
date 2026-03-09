@@ -1,0 +1,8 @@
+[
+  {"name": "Math",    "subject": "math",    "related_skill": "academics",  "baseline": 72},
+  {"name": "English", "subject": "english", "related_skill": "academics",  "baseline": 72},
+  {"name": "Science", "subject": "science", "related_skill": "academics",  "baseline": 72},
+  {"name": "Art",     "subject": "art",     "related_skill": "creativity", "baseline": 72},
+  {"name": "PE",      "subject": "pe",      "related_skill": "athletics",  "baseline": 72},
+  {"name": "Music",   "subject": "music",   "related_skill": "music",      "baseline": 72}
+]

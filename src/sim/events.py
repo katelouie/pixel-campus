@@ -11,6 +11,9 @@ if TYPE_CHECKING:
     from .engine import GameState
 
 from .models import Skill
+from .needs import NeedType, satisfy_need
+from .thoughts import add_thought, thought_event_failure, thought_event_success
+from .traits import combined_thought_mult
 
 
 @dataclass
@@ -80,12 +83,27 @@ def resolve_event(state: "GameState", event: SchoolEvent) -> list[str]:
         skill_level = student.skills.get(event.required_skill, 0)
         if skill_level >= event.skill_threshold:
             successes += 1
-            student.mood_value = min(100, student.mood_value + 10)
+            # Boost fun and social needs (event went well!)
+            satisfy_need(student.needs, NeedType.FUN, 10)
+            satisfy_need(student.needs, NeedType.SOCIAL, 5)
+            # Add success thought (scaled by traits)
+            success_thought = thought_event_success(event.name)
+            success_thought.mood_effect *= combined_thought_mult(
+                student.traits, success_thought.category, success_thought.mood_effect
+            )
+            add_thought(student.thoughts, success_thought)
             log.append(
                 f"{student.name} nails it! ({event.required_skill.value}: {skill_level:.0f})"
             )
         else:
-            student.mood_value = max(0, student.mood_value - 5)
+            # Drain fun (event was stressful)
+            satisfy_need(student.needs, NeedType.FUN, -5)
+            # Add failure thought (scaled by traits)
+            failure_thought = thought_event_failure(event.name)
+            failure_thought.mood_effect *= combined_thought_mult(
+                student.traits, failure_thought.category, failure_thought.mood_effect
+            )
+            add_thought(student.thoughts, failure_thought)
             log.append(
                 f"{student.name} struggles... ({event.required_skill.value}: {skill_level:.0f})"
             )

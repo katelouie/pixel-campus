@@ -1,0 +1,45 @@
+{
+  "friendship": {
+    "stranger": [
+      "{a} and {b} awkwardly make eye contact.",
+      "{a} nods at {b}. {b} nods back.",
+      "{a} accidentally bumps into {b}. 'Oh, sorry!'"
+    ],
+    "acquaintance": [
+      "{a} and {b} chat about homework.",
+      "{b} asks {a} about their weekend plans.",
+      "{a} and {b} discover they both like the same show."
+    ],
+    "friend": [
+      "{a} and {b} are cracking up about something.",
+      "{a} saves {b} a seat.",
+      "{b} shares their snacks with {a}."
+    ],
+    "close_friend": [
+      "{a} and {b} have a deep conversation.",
+      "{a} confides something personal to {b}.",
+      "{b} and {a} make plans for the weekend."
+    ],
+    "best_friend": [
+      "{a} and {b} share a look that says everything.",
+      "{a} and {b} have their own secret handshake.",
+      "{b} knows exactly what {a} is thinking."
+    ]
+  },
+  "romance": {
+    "platonic": [
+      "{a} and {b} exchange a polite smile.",
+      "{a} holds the door for {b}."
+    ],
+    "crush": [
+      "{a} keeps glancing at {b} when they're not looking.",
+      "{b} gets flustered when {a} sits next to them.",
+      "{a} wrote {b}'s name in their notebook. Classic."
+    ],
+    "dating": [
+      "{a} and {b} are holding hands.",
+      "{a} and {b} share headphones, each with one earbud.",
+      "{b} left a cute note in {a}'s locker."
+    ]
+  }
+}

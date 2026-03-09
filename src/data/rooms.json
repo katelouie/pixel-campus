@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Library",
+    "description": "Quiet study spot. Academics soar, but restless students get bored.",
+    "skill_boost": "academics",
+    "boost_per_tick": 1.5,
+    "needs_satisfied": {"academics": 2.0, "fun": -0.3},
+    "capacity": 8,
+    "position": [0, 0]
+  },
+  {
+    "name": "Art Room",
+    "description": "Paints, clay, and self-expression.",
+    "skill_boost": "creativity",
+    "boost_per_tick": 1.5,
+    "needs_satisfied": {"creativity": 2.0, "fun": 1.0},
+    "capacity": 8,
+    "position": [2, 0]
+  },
+  {
+    "name": "Gym",
+    "description": "Hoops, laps, and pickup games.",
+    "skill_boost": "athletics",
+    "boost_per_tick": 1.5,
+    "needs_satisfied": {"athletics": 2.0, "rest": -0.5},
+    "capacity": 8,
+    "position": [0, 2]
+  },
+  {
+    "name": "Cafeteria",
+    "description": "Lunch tables and gossip. Everyone's mood lifts. Drama brews.",
+    "skill_boost": "social",
+    "boost_per_tick": 1.0,
+    "needs_satisfied": {"social": 1.5, "fun": 1.0},
+    "capacity": 8,
+    "position": [2, 2]
+  }
+]

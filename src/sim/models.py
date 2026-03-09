@@ -10,6 +10,10 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any
 
+from .needs import Need, NeedType, compute_needs_mood, create_default_needs
+from .thoughts import Thought, sum_thought_effects
+from .traits import Trait, combined_skill_mult
+
 
 class Mood(Enum):
     """Emotional state that affects behaviour and point generation."""
@@ -22,10 +26,10 @@ class Mood(Enum):
     @property
     def icon(self) -> str:
         return {
-            Mood.HAPPY: "😊",
-            Mood.NEUTRAL: "😐",
-            Mood.SAD: "😢",
-            Mood.TIRED: "😴",
+            Mood.HAPPY: "\U0001f60a",
+            Mood.NEUTRAL: "\U0001f610",
+            Mood.SAD: "\U0001f622",
+            Mood.TIRED: "\U0001f634",
         }[self]
 
 
@@ -74,12 +78,13 @@ class Room:
 
     name: str
     skill_boost: Skill
-    boost_per_tick: float = (
-        10.0  # base points added to relevant skill per activity tick
-    )
-    mood_per_tick: float = 5.0  # base mood delta per activity tick
+    boost_per_tick: float = 1.5
     capacity: int = 8
     description: str = ""
+
+    # Which needs this room satisfies (and by how much per activity tick)
+    # Positive = satisfies, negative = drains
+    needs_satisfied: dict[str, float] = field(default_factory=dict)
 
     # For travel time calculation (like a grid position)
     position: tuple[int, int] = (0, 0)
@@ -100,25 +105,29 @@ class Student:
     name: str
     student_id: int
 
-    # Stats (0-100 scale)
-    mood_value: float = 70.0
-    energy: float = 100.0
+    # Needs system (replaces old mood_value + energy)
+    needs: dict[NeedType, Need] = field(default_factory=create_default_needs)
 
     # Skills (0-100 scale)
     skills: dict[Skill, float] = field(default_factory=dict)
 
-    # Preferences: {Skill: multiplier 0.4–1.2}
-    # High = loves it (mood boost, faster skill gain)
-    # Low = hates it (mood drain, slower gain)
-    preferences: dict[Skill, float] = field(default_factory=dict)
+    # Personality traits (1-2 per student, assigned at creation)
+    traits: list[Trait] = field(default_factory=list)
 
     # Current state
     state: StudentState = StudentState.IDLE
-    location: Room | None = None  # Current location
-    destination: Room | None = None  # Where they're headed (if travelling)
-    activity_ticks_left: int = 0  # Ticks remaining on current activity - countdown
-    travel_ticks_left: int = 0  # Ticks remaining in transit - countdown
-    chat_partner_id: int | None = None  # Who they're talking with
+    location: Room | None = None
+    destination: Room | None = None
+    activity_ticks_left: int = 0
+    travel_ticks_left: int = 0
+    chat_partner_id: int | None = None
+
+    # Grades (initialized by engine.py via academics.create_default_grades)
+    # Typed as Any to avoid circular import with academics module
+    grades: dict = field(default_factory=dict)
+
+    # Thoughts (mood modifiers with durations)
+    thoughts: list[Thought] = field(default_factory=list)
 
     # Journal
     journal: list[tuple[int, str]] = field(default_factory=list)
@@ -126,12 +135,33 @@ class Student:
     def __post_init__(self) -> None:
         if not self.skills:
             self.skills = {s: 0.0 for s in Skill}
-        if not self.preferences:
-            self.preferences = {s: round(random.uniform(0.4, 1.2), 2) for s in Skill}
+
+    # ------------------------------------------------------------------
+    # Mood (backward-compatible properties)
+    # ------------------------------------------------------------------
+
+    @property
+    def mood_value(self) -> float:
+        """Overall mood computed from needs + active thoughts (0-100).
+
+        Needs provide the baseline (centered at 50), thoughts shift it up/down.
+        """
+        needs_baseline = compute_needs_mood(self.needs)
+        thought_sum = sum_thought_effects(self.thoughts)
+        return max(0.0, min(100.0, needs_baseline + thought_sum))
+
+    @property
+    def energy(self) -> float:
+        """Backward-compat alias for REST need value."""
+        return self.needs[NeedType.REST].value
+
+    @energy.setter
+    def energy(self, val: float) -> None:
+        self.needs[NeedType.REST].value = max(0.0, min(100.0, val))
 
     @property
     def mood(self) -> Mood:
-        """Derive Mood enum from raw values."""
+        """Derive Mood enum from needs."""
         if self.energy < 20:
             return Mood.TIRED
         if self.mood_value >= 70:
@@ -142,11 +172,20 @@ class Student:
 
     @property
     def favorite_skill(self) -> Skill:
-        return max(self.preferences, key=lambda s: self.preferences[s])
+        """Skill with the highest combined trait multiplier."""
+        # Only consider the 4 core activity skills
+        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL]
+        if self.traits:
+            return max(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
+        return random.choice(core_skills)
 
     @property
     def dreaded_skill(self) -> Skill:
-        return min(self.preferences, key=lambda s: self.preferences[s])
+        """Skill with the lowest combined trait multiplier."""
+        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL]
+        if self.traits:
+            return min(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
+        return random.choice(core_skills)
 
     @property
     def is_busy(self) -> bool:
@@ -154,9 +193,9 @@ class Student:
         return self.state != StudentState.IDLE
 
     def clamp_stats(self) -> None:
-        """Keep mood and energy within 0-100."""
-        self.mood_value = max(0, min(100, self.mood_value))
-        self.energy = max(0, min(100, self.energy))
+        """Keep all stats within bounds."""
+        for need in self.needs.values():
+            need.clamp()
         for skill in self.skills:
             self.skills[skill] = max(0.0, min(100.0, self.skills[skill]))
 
@@ -192,7 +231,7 @@ class Friendship:
     student_id1: int
     student_id2: int
     level: FriendshipLevel = FriendshipLevel.STRANGER
-    affinity: int = 0  # 0–100, thresholds trigger level-ups
+    affinity: int = 0  # 0-100, thresholds trigger level-ups
     history: list[str] = field(default_factory=list)
 
     @property
@@ -225,7 +264,7 @@ class Romance:
     student_id1: int
     student_id2: int
     level: RomanceLevel = RomanceLevel.PLATONIC
-    affinity: int = 0  # 0–100, thresholds trigger level-ups
+    affinity: int = 0  # 0-100, thresholds trigger level-ups
     history: list[str] = field(default_factory=list)
 
     @property

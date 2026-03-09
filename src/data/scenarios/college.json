@@ -1,0 +1,25 @@
+{
+  "name": "College",
+  "description": "Freedom, responsibility, and figuring out who you are.",
+  "num_students": 12,
+  "graduation_target": 1200,
+  "ticks_per_day": 96,
+  "report_card_interval": 14,
+  "rooms_file": "rooms.json",
+  "events_file": "events.json",
+  "traits_file": "traits.json",
+  "classes_file": "classes.json",
+  "social_text_file": "social_text.json",
+  "starting_room": "Cafeteria",
+  "day_reset": {
+    "rest_recovery": [20, 40],
+    "fun_recovery": [15, 25],
+    "social_recovery": [10, 20],
+    "minor_recovery": [3, 8]
+  },
+  "student_names": [
+    "Alex", "Jordan", "Casey", "Morgan",
+    "Riley", "Quinn", "Sage", "Rowan",
+    "Taylor", "Avery", "Dakota", "Reese"
+  ]
+}

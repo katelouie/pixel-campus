@@ -8,30 +8,48 @@ The engine calls this for every student every tick.
 import random
 from typing import TYPE_CHECKING
 
+from .academics import apply_activity_to_grades
 from .models import SKILL_TO_ACTIVITY, Room, Skill, Student, StudentState
+from .needs import NeedType, satisfy_need, tick_needs
+from .thoughts import (
+    add_thought,
+    thought_activity_dreaded,
+    thought_activity_favorite,
+    thought_running_on_fumes,
+    thought_so_bored,
+    tick_thoughts,
+)
+from .traits import combined_skill_mult, combined_thought_mult
 
 if TYPE_CHECKING:
     from .engine import GameState
 
 
+# Map NeedType to the room skill that satisfies it
+NEED_TO_SKILL: dict[NeedType, Skill] = {
+    NeedType.ACADEMICS: Skill.ACADEMICS,
+    NeedType.ATHLETICS: Skill.ATHLETICS,
+    NeedType.CREATIVITY: Skill.CREATIVITY,
+    NeedType.SOCIAL: Skill.SOCIAL,
+    NeedType.FUN: Skill.SOCIAL,  # cafeteria / socializing is fun
+}
+
+
 def travel_time(from_room: Room | None, to_room: Room) -> int:
     """Calculate ticks needed to travel between two rooms.
 
-    Uses simple Manhattan distance on the room grid.
-    Minimum 1 tick.
+    Uses simple Manhattan distance on the room grid. Minimum 1 tick.
     """
     if from_room is None:
-        return 2  # Wandering -> any room
+        return 2
     dx = abs(from_room.position[0] - to_room.position[0])
     dy = abs(from_room.position[1] - to_room.position[1])
-
     return max(1, dx + dy)
 
 
 def send_to_room(student: Student, room: Room) -> str:
     """Player directs a student to a room. Starts travel."""
     if student.location == room and student.state != StudentState.TRAVELING:
-        # Already there, just start the activity
         return start_activity(student, room)
 
     ticks = travel_time(student.location, room)
@@ -49,30 +67,21 @@ def start_activity(student: Student, room: Room) -> str:
     student.location = room
     student.destination = None
     student.travel_ticks_left = 0
-
-    # Activity duration: 4-8 ticks (40-80 in-game minutes)
     student.activity_ticks_left = random.randint(4, 8)
-
     return f"{student.name} starts {activity.value} in the {room.name}."
 
 
 def process_student(student: Student, state: "GameState") -> list[str]:
-    """Advance 1 student by 1 tick. Returns log messages.
-
-    Called by the engine for every student * every tick.
-    """
+    """Advance 1 student by 1 tick. Returns log messages."""
     log: list[str] = []
 
     match student.state:
         case StudentState.IDLE:
             log.extend(_process_idle(student, state))
-
         case StudentState.TRAVELING:
             log.extend(_process_traveling(student))
-
         case StudentState.RESTING:
             log.extend(_process_resting(student))
-
         case (
             StudentState.STUDYING
             | StudentState.EXERCISING
@@ -80,13 +89,21 @@ def process_student(student: Student, state: "GameState") -> list[str]:
             | StudentState.SOCIALIZING
         ):
             log.extend(_process_activity(student))
-
         case StudentState.CHATTING:
             log.extend(_process_chatting(student, state))
 
-    # Universal: small energy decrease every tick
-    student.energy -= random.uniform(0.3, 0.8)
+    # Universal: decay all needs each tick (traits modify decay rates)
+    tick_needs(student.needs, traits=student.traits)
     student.clamp_stats()
+
+    # Tick thoughts (expire old ones)
+    student.thoughts = tick_thoughts(student.thoughts)
+
+    # Critical need thoughts (refresh while need stays low)
+    if student.needs[NeedType.REST].value < 10:
+        add_thought(student.thoughts, thought_running_on_fumes())
+    if student.needs[NeedType.FUN].value < 15:
+        add_thought(student.thoughts, thought_so_bored())
 
     return log
 
@@ -97,15 +114,15 @@ def process_student(student: Student, state: "GameState") -> list[str]:
 
 
 def _process_idle(student: Student, state: "GameState") -> list[str]:
-    """Idle students might decide to do something on their own."""
+    """Idle students recover slightly and might decide to do something."""
     log: list[str] = []
 
-    # Recover a little mood and energy while idle
-    student.mood_value += random.uniform(0.2, 0.8)
-    student.energy += random.uniform(0.5, 1.5)
+    # Small recovery while idle
+    satisfy_need(student.needs, NeedType.REST, 1.0)
+    satisfy_need(student.needs, NeedType.FUN, 0.3)
 
     # Autonomous decision-making
-    if random.random() < 0.06:  # ~6% per tick -> expected value = once every 15 ticks
+    if random.random() < 0.06:
         log.extend(_autonomous_decision(student, state))
 
     return log
@@ -134,57 +151,72 @@ def _process_activity(student: Student) -> list[str]:
         student.state = StudentState.IDLE
         return log
 
-    # Apply per-tick skill and mood effects
-    pref_mult = student.preferences.get(room.skill_boost, 0.7)
-    skill_gain = room.boost_per_tick * pref_mult
+    # Apply skill growth (modified by traits)
+    trait_skill_mult = combined_skill_mult(student.traits, room.skill_boost.value)
+    skill_gain = room.boost_per_tick * trait_skill_mult
     student.skills[room.skill_boost] += skill_gain
 
-    # Mood change: positive if likes it, negative if dislikes it
-    mood_delta = room.mood_per_tick * pref_mult
-    if pref_mult < 0.55:
-        mood_delta = -abs(mood_delta) * 1.5  # really miserable
-    student.mood_value += mood_delta
+    # Apply need satisfaction from this room (traits modify satisfaction amounts)
+    for need_key, amount in room.needs_satisfied.items():
+        try:
+            need_type = NeedType(need_key)
+            satisfy_need(student.needs, need_type, amount, traits=student.traits)
+        except ValueError:
+            pass  # unknown need key, skip
 
-    # Add extra energy drain for physical activities
-    if student.state == StudentState.EXERCISING:
-        student.energy -= random.uniform(0.5, 1.0)
+    # Apply grade contributions for related subjects
+    apply_activity_to_grades(student.grades, room.skill_boost, skill_gain)
 
     # Count down
     student.activity_ticks_left -= 1
     if student.activity_ticks_left <= 0:
-        log.append(f"{student.name} finishes {student.state.value} in the {room.name}.")
+        log.append(
+            f"{student.name} finishes {student.state.value} in the {room.name}."
+        )
+        # Activity completion thoughts based on trait-derived preferences
+        if room.skill_boost == student.favorite_skill:
+            thought = thought_activity_favorite(room.skill_boost.value)
+            thought.mood_effect *= combined_thought_mult(
+                student.traits, thought.category, thought.mood_effect
+            )
+            add_thought(student.thoughts, thought)
+        elif room.skill_boost == student.dreaded_skill:
+            thought = thought_activity_dreaded(room.skill_boost.value)
+            thought.mood_effect *= combined_thought_mult(
+                student.traits, thought.category, thought.mood_effect
+            )
+            add_thought(student.thoughts, thought)
         student.state = StudentState.IDLE
 
     return log
 
 
 def _process_chatting(student: Student, state: "GameState") -> list[str]:
-    """Process a 1-on-1 chat tick.
-
-    Both participants tick together but we only process from 1 perspective (lower ID)
-    to prevent double-counting.
-    """
+    """Process a 1-on-1 chat tick."""
     log: list[str] = []
 
-    # only process from the perspective of the lower student ID
+    # Only process from the lower student ID's perspective
     if (
         student.chat_partner_id is not None
         and student.student_id > student.chat_partner_id
     ):
-        return log  # Let the partner handle it
+        return log
 
     student.activity_ticks_left -= 1
 
-    # Both partners get a small social/mood boost
     partner = state.get_student_by_id(student.chat_partner_id)
     if partner:
         for person in [student, partner]:
-            person.mood_value += random.uniform(0.5, 1.5)
-            person.skills[Skill.SOCIAL] += 0.5
+            skill_mult = combined_skill_mult(person.traits, Skill.SOCIAL.value)
+            person.skills[Skill.SOCIAL] += 0.5 * skill_mult
+            satisfy_need(person.needs, NeedType.SOCIAL, 1.5, traits=person.traits)
+            satisfy_need(person.needs, NeedType.FUN, 0.5, traits=person.traits)
 
     if student.activity_ticks_left <= 0:
         if partner:
-            log.append(f"{student.name} and {partner.name} finish their conversation.")
+            log.append(
+                f"{student.name} and {partner.name} finish their conversation."
+            )
             partner.state = StudentState.IDLE
             partner.chat_partner_id = None
             partner.activity_ticks_left = 0
@@ -195,10 +227,10 @@ def _process_chatting(student: Student, state: "GameState") -> list[str]:
 
 
 def _process_resting(student: Student) -> list[str]:
-    """Resting recovers energy fast."""
+    """Resting recovers REST need fast."""
     log: list[str] = []
-    student.energy += random.uniform(2.0, 4.0)
-    student.mood_value += random.uniform(0.2, 0.5)
+    satisfy_need(student.needs, NeedType.REST, 3.0)
+    satisfy_need(student.needs, NeedType.FUN, 0.2)
     student.activity_ticks_left -= 1
 
     if student.activity_ticks_left <= 0:
@@ -214,29 +246,39 @@ def _process_resting(student: Student) -> list[str]:
 
 
 def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
-    """A student decides to do something on their own -- AI decision."""
+    """A student decides to do something on their own based on their most depleted need."""
     log: list[str] = []
 
-    # Rest if energy is low
-    if student.energy < 25:
+    # Rest if REST need is critically low
+    if student.needs[NeedType.REST].value < 25:
         student.state = StudentState.RESTING
         student.activity_ticks_left = random.randint(3, 6)
         log.append(f"{student.name} is tired and sits down to rest.")
         return log
 
-    # Otherwise: wander to a room they like
-    favorite = student.favorite_skill
-    matching_rooms = [r for r in state.rooms if r.skill_boost == favorite]
-    if matching_rooms:
-        room = random.choice(matching_rooms)
-        send_to_room(student, room)
-        log.append(f"{student.name} decides on their own to head to the {room.name}.")
-    else:
-        # Just pick a random room to go to
-        room = random.choice(state.rooms)
-        send_to_room(student, room)
-        log.append(f"{student.name} wanders toward the {room.name}")
+    # Find the most depleted need (weighted by preference for variety)
+    lowest_need = min(
+        student.needs.values(),
+        key=lambda n: n.value,
+    )
 
+    # Find a room that satisfies this need
+    target_skill = NEED_TO_SKILL.get(lowest_need.need_type)
+    if target_skill:
+        matching_rooms = [
+            r for r in state.rooms if r.skill_boost == target_skill
+        ]
+        if matching_rooms:
+            room = random.choice(matching_rooms)
+            send_to_room(student, room)
+            log.append(
+                f"{student.name} decides to head to the {room.name} "
+                f"({lowest_need.need_type.value} is low)."
+            )
+            return log
+
+    # Fallback: pick a random room
+    room = random.choice(state.rooms)
+    send_to_room(student, room)
+    log.append(f"{student.name} wanders toward the {room.name}.")
     return log
-
-
