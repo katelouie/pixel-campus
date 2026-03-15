@@ -14,19 +14,13 @@ from src.ui.sprites import load_character_textures
 from src.ui.views.campus import CampusView
 
 # Screen
-SCREEN_WIDTH: int = 900
-SCREEN_HEIGHT: int = 700
+SCREEN_WIDTH: int = 1280
+SCREEN_HEIGHT: int = 800
 SCREEN_TITLE: str = "Pixel Campus"
 
 # Asset paths (resolved relative to project root, not CWD)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _ASSET_BASE = _PROJECT_ROOT / "assets" / "sprites" / "Modern tiles_Free"
-ROOM_BUILDER_PATH = str(
-    _ASSET_BASE / "Interiors_free" / "48x48" / "Room_Builder_free_48x48.png"
-)
-INTERIORS_PATH = str(
-    _ASSET_BASE / "Interiors_free" / "48x48" / "Interiors_free_48x48.png"
-)
 CHAR_BASE = str(_ASSET_BASE / "Characters_free")
 CHARACTER_SHEETS: list[str] = ["Adam", "Alex", "Amelia", "Bob"]
 
@@ -44,10 +38,6 @@ class PixelCampusWindow(arcade.Window):
         # Create the simulation
         self.state = GameState.new_game(num_students=4)
 
-        # Load shared spritesheets (expensive, do once)
-        self.room_builder_sheet = arcade.load_spritesheet(ROOM_BUILDER_PATH)
-        self.interiors_sheet = arcade.load_spritesheet(INTERIORS_PATH)
-
         # Load character textures for all available characters
         self.char_textures: dict[str, dict] = {
             name: load_character_textures(name, CHAR_BASE)
@@ -55,12 +45,7 @@ class PixelCampusWindow(arcade.Window):
         }
 
         # Launch the campus view
-        campus = CampusView(
-            state=self.state,
-            room_builder_sheet=self.room_builder_sheet,
-            interiors_sheet=self.interiors_sheet,
-            char_textures=self.char_textures,
-        )
+        campus = CampusView(state=self.state, char_textures=self.char_textures)
         self.show_view(campus)
 
 

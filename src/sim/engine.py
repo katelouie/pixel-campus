@@ -75,6 +75,38 @@ DEFAULT_ROOMS: list[Room] = [
         description="Lunch tables and gossip. Everyone's mood lifts. Drama brews.",
         position=(2, 2),
     ),
+    Room(
+        name="Math Classroom",
+        skill_boost=Skill.ACADEMICS,
+        boost_per_tick=2.0,
+        needs_satisfied={"academics": 2.5, "fun": -0.5},
+        description="Desks, equations, and the quiet scratch of pencils.",
+        position=(0, 1),
+    ),
+    Room(
+        name="Computer Lab",
+        skill_boost=Skill.ACADEMICS,
+        boost_per_tick=1.5,
+        needs_satisfied={"academics": 1.5, "fun": 0.5},
+        description="Rows of screens. Research, coding, and the occasional game.",
+        position=(2, 1),
+    ),
+    Room(
+        name="Music Room",
+        skill_boost=Skill.MUSIC,
+        boost_per_tick=2.0,
+        needs_satisfied={"creativity": 1.5, "fun": 1.5},
+        description="Instruments, sheet music, and occasional cacophony.",
+        position=(1, 3),
+    ),
+    Room(
+        name="Quad",
+        skill_boost=Skill.SOCIAL,
+        boost_per_tick=0.5,
+        needs_satisfied={"social": 2.0, "fun": 1.5, "rest": 0.5},
+        description="Open air and open conversations. The social heart of campus.",
+        position=(1, 1),
+    ),
 ]
 
 DEFAULT_NAMES: list[str] = [
@@ -217,11 +249,9 @@ class GameState:
             from . import social as social_module
             social_module.load_text_from_defs(defs.social_text)
 
-        # Start the day with all students in the starting room
-        start_room = state.get_room_by_name(scenario.starting_room)
-        if start_room:
-            for s in students:
-                s.location = start_room
+        # Students start at the spawn point (location = None) so all dispatches fire
+        for s in students:
+            s.location = None
 
         return state
 
@@ -397,11 +427,9 @@ class GameState:
         # Move to next day
         self.clock.new_day()
 
-        # Everyone starts in the cafeteria
-        cafeteria = self.get_room_by_name("Cafeteria")
-        if cafeteria:
-            for s in self.students:
-                s.location = cafeteria
+        # Students start at the spawn point (no room yet) so all dispatches fire properly
+        for s in self.students:
+            s.location = None
 
         log.append(f"Day {self.clock.day} begins! ({self.clock.time_str})")
         return log

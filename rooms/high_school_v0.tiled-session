@@ -1,0 +1,119 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "high_school_v0.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "3d_walls.tsx": {
+            "scaleInDock": 0.6334,
+            "scaleInEditor": 1
+        },
+        "arched_entryways.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "baseboards.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "borders.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floor_connectors.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floor_shadows.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floors.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "high_school_v0.tmx": {
+            "scale": 0.1933,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 2987.5840662183136,
+                "y": 3383.3419555095707
+            }
+        },
+        "home_wood_14x13.tmx": {
+            "scale": 0.9156944444444444,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 335.8107083270135,
+                "y": 360.38222357045356
+            }
+        },
+        "home_wood_14x15.tmx": {
+            "scale": 0.9156944444444444,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 335.8107083270135,
+                "y": 360.38222357045356
+            }
+        },
+        "museum_gray_16x17.tmx": {
+            "scale": 0.8052734374999999,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 384.34149890856173,
+                "y": 408.55687606112053
+            }
+        },
+        "museum_gray_16x17_fixed.tmx": {
+            "scale": 0.8052734374999999,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 384.34149890856173,
+                "y": 408.55687606112053
+            }
+        },
+        "room_builder.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "walls.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        }
+    },
+    "last.imagePath": "/Users/katelouie/code/pixel-campus/assets/packs/modernexteriors-win/Modern_Exteriors_48x48/ME_Theme_Sorter_48x48/13_School_Singles_48x48",
+    "map.height": 100,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 48,
+    "map.tileWidth": 48,
+    "map.width": 100,
+    "openFiles": [
+        "high_school_v0.tmx",
+        "borders.tsx"
+    ],
+    "project": "high_school_v0.tiled-project",
+    "recentFiles": [
+        "room_builder.tsx",
+        "arched_entryways.tsx",
+        "borders.tsx",
+        "high_school_v0.tmx",
+        "walls.tsx",
+        "3d_walls.tsx",
+        "floors.tsx",
+        "baseboards.tsx",
+        "floor_connectors.tsx",
+        "floor_shadows.tsx",
+        "home_wood_14x13.tmx",
+        "home_wood_14x15.tmx"
+    ],
+    "resizeMap.removeObjects": false,
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 48,
+        "width": 48
+    }
+}

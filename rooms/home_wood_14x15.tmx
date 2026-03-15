@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="14" height="15" tilewidth="48" tileheight="48" infinite="0" nextlayerid="3" nextobjectid="1">
+ <tileset firstgid="1" source="floors.tsx"/>
+ <tileset firstgid="601" source="walls.tsx"/>
+ <tileset firstgid="1881" source="3d_walls.tsx"/>
+ <layer id="1" name="Floors" width="14" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjYBg4cJiRgeEIAYwNXAKKXyaAR/WN6kMHpKrHZTc2AACph1gK
+  </data>
+ </layer>
+ <layer id="2" name="Walls" width="14" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjYICAZHYGhltMhHEaOwMKqAbyfzERxrVo+iaj8XGBaaP6RvVRoO82kH8Xig+hyR1HkruHx/xbaHL3sagFAMlwKIg=
+  </data>
+ </layer>
+</map>

@@ -17,8 +17,8 @@ SPRITE_HEIGHT: int = 32
 SPRITE_SCALE: float = 2.5
 
 # Movement
-MOVEMENT_SPEED: float = 2.0
-ARRIVAL_DISTANCE: float = 5.0
+MOVEMENT_SPEED: float = 6.0
+ARRIVAL_DISTANCE: float = 24.0
 
 # Animation
 ANIMATION_SPEED: int = 8  # game frames per animation frame
@@ -107,17 +107,35 @@ class StudentSprite(arcade.Sprite):
         # Movement
         self.target_x: float | None = None
         self.target_y: float | None = None
+        self.path: list[tuple[float, float]] = []
         self.direction = "down"
         self.is_walking = False
+
+        # Stuck detection
+        self._stuck_timer: int = 0
+        self._last_pos: tuple[float, float] = (0.0, 0.0)
 
         # Animation
         self.anim_timer = 0
         self.anim_frame = 0
 
     def set_target(self, x: float, y: float) -> None:
-        """Start walking toward a screen position."""
+        """Start walking directly to a position (no pathfinding — use set_path instead)."""
+        self.path = []
         self.target_x = x
         self.target_y = y
+        self.is_walking = True
+        self.anim_timer = 0
+        self.anim_frame = 0
+
+    def set_path(self, waypoints: list[tuple[float, float]]) -> None:
+        """Walk along a sequence of waypoints (e.g. from A* pathfinding)."""
+        if not waypoints:
+            self.stop()
+            return
+        self.path = list(waypoints)
+        first = self.path.pop(0)
+        self.target_x, self.target_y = first
         self.is_walking = True
         self.anim_timer = 0
         self.anim_frame = 0
@@ -125,13 +143,18 @@ class StudentSprite(arcade.Sprite):
     def stop(self) -> None:
         """Stop walking and show the idle texture."""
         self.is_walking = False
+        self.path = []
         self.target_x = None
         self.target_y = None
+        self.change_x = 0.0
+        self.change_y = 0.0
         self.texture = self.idle_textures[self.direction]
 
     def update_movement(self) -> None:
-        """Move toward target and animate. Called every frame by the view."""
+        """Set change_x/change_y toward target. PhysicsEngineSimple applies the move."""
         if not self.is_walking or self.target_x is None or self.target_y is None:
+            self.change_x = 0.0
+            self.change_y = 0.0
             return
 
         dx = self.target_x - self.center_x
@@ -139,12 +162,34 @@ class StudentSprite(arcade.Sprite):
         distance = math.sqrt(dx * dx + dy * dy)
 
         if distance < ARRIVAL_DISTANCE:
-            self.stop()
+            if self.path:
+                self.target_x, self.target_y = self.path.pop(0)
+            else:
+                self.stop()
+            self._stuck_timer = 0
             return
 
-        # Normalized direction × speed
-        self.center_x += (dx / distance) * MOVEMENT_SPEED
-        self.center_y += (dy / distance) * MOVEMENT_SPEED
+        # Stuck detection: if barely moved in 30 frames, skip to next waypoint
+        moved = math.sqrt(
+            (self.center_x - self._last_pos[0]) ** 2
+            + (self.center_y - self._last_pos[1]) ** 2
+        )
+        if moved < 0.5:
+            self._stuck_timer += 1
+            if self._stuck_timer > 30:
+                self._stuck_timer = 0
+                if self.path:
+                    self.target_x, self.target_y = self.path.pop(0)
+                else:
+                    self.stop()
+                return
+        else:
+            self._stuck_timer = 0
+        self._last_pos = (self.center_x, self.center_y)
+
+        # Normalized direction × speed — physics engine applies the actual move
+        self.change_x = (dx / distance) * MOVEMENT_SPEED
+        self.change_y = (dy / distance) * MOVEMENT_SPEED
 
         # Face the dominant axis
         if abs(dx) > abs(dy):
