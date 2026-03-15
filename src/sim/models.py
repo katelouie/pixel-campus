@@ -46,6 +46,12 @@ class Skill(Enum):
     FLIRT = "flirt"
 
 
+class Gender(Enum):
+    MALE = "male"
+    FEMALE = "female"
+    NON_BINARY = "non_binary"
+
+
 class StudentState(Enum):
     """What a student is doing right now.
 
@@ -89,6 +95,9 @@ class Room:
     # For travel time calculation (like a grid position)
     position: tuple[int, int] = (0, 0)
 
+    # Tiled sit/stand point name prefixes that map to this room (UI layer reads this)
+    sit_prefixes: list[str] = field(default_factory=list)
+
     def __hash__(self) -> int:
         return hash(self.name)
 
@@ -104,6 +113,7 @@ class Student:
 
     name: str
     student_id: int
+    gender: Gender = Gender.NON_BINARY
 
     # Needs system (replaces old mood_value + energy)
     needs: dict[NeedType, Need] = field(default_factory=create_default_needs)
@@ -173,8 +183,7 @@ class Student:
     @property
     def favorite_skill(self) -> Skill:
         """Skill with the highest combined trait multiplier."""
-        # Only consider the 4 core activity skills
-        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL]
+        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
         if self.traits:
             return max(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
         return random.choice(core_skills)
@@ -182,7 +191,7 @@ class Student:
     @property
     def dreaded_skill(self) -> Skill:
         """Skill with the lowest combined trait multiplier."""
-        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL]
+        core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
         if self.traits:
             return min(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
         return random.choice(core_skills)

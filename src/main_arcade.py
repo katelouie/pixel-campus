@@ -10,8 +10,8 @@ import arcade
 from pyglet import gl
 
 from src.sim.engine import GameState
-from src.ui.sprites import load_character_textures
-from src.ui.views.campus import CampusView
+from src.ui.sprites import load_premade_character_textures
+from src.ui.views.campus import CHARACTER_SHEET_NUMS, CampusView
 
 # Screen
 SCREEN_WIDTH: int = 1280
@@ -20,9 +20,12 @@ SCREEN_TITLE: str = "Pixel Campus"
 
 # Asset paths (resolved relative to project root, not CWD)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-_ASSET_BASE = _PROJECT_ROOT / "assets" / "sprites" / "Modern tiles_Free"
-CHAR_BASE = str(_ASSET_BASE / "Characters_free")
-CHARACTER_SHEETS: list[str] = ["Adam", "Alex", "Amelia", "Bob"]
+CHAR_BASE = str(
+    _PROJECT_ROOT
+    / "assets" / "packs" / "moderninteriors-win"
+    / "2_Characters" / "Character_Generator"
+    / "0_Premade_Characters" / "48x48"
+)
 
 
 class PixelCampusWindow(arcade.Window):
@@ -36,12 +39,12 @@ class PixelCampusWindow(arcade.Window):
         arcade.SpriteList.DEFAULT_TEXTURE_FILTER = gl.GL_NEAREST, gl.GL_NEAREST
 
         # Create the simulation
-        self.state = GameState.new_game(num_students=4)
+        self.state = GameState.new_game(num_students=20)
 
-        # Load character textures for all available characters
-        self.char_textures: dict[str, dict] = {
-            name: load_character_textures(name, CHAR_BASE)
-            for name in CHARACTER_SHEETS
+        # Load character textures for all premade characters in use
+        self.char_textures: dict[int, dict] = {
+            num: load_premade_character_textures(num, CHAR_BASE)
+            for num in CHARACTER_SHEET_NUMS
         }
 
         # Launch the campus view

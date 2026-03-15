@@ -17,9 +17,5 @@
     "social_recovery": [10, 20],
     "minor_recovery": [3, 8]
   },
-  "student_names": [
-    "Alex", "Jordan", "Casey", "Morgan",
-    "Riley", "Quinn", "Sage", "Rowan",
-    "Taylor", "Avery", "Dakota", "Reese"
-  ]
+  "names_file": "names.json"
 }

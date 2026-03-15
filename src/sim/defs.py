@@ -43,6 +43,7 @@ def _load_rooms(path: Path) -> list[Room]:
                 capacity=entry.get("capacity", 8),
                 description=entry.get("description", ""),
                 position=tuple(entry.get("position", [0, 0])),
+                sit_prefixes=entry.get("sit_prefixes", []),
             )
         )
     return rooms

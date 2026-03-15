@@ -85,5 +85,27 @@
     "thought_modifiers": {"activity": 1.2},
     "skill_multipliers": {"creativity": 1.5, "academics": 0.8},
     "grade_baseline_modifiers": {"art": 10, "music": 5, "math": -5}
+  },
+  {
+    "name": "Flirt",
+    "description": "Charming and magnetic. Thrives around people, especially attractive ones.",
+    "need_modifiers": {
+      "social": {"decay_mult": 1.4, "satisfy_mult": 2.0},
+      "fun": {"satisfy_mult": 1.5}
+    },
+    "thought_modifiers": {"social": 1.5},
+    "skill_multipliers": {"flirt": 1.5, "social": 1.2, "academics": 0.7},
+    "grade_baseline_modifiers": {"math": -3, "english": 3}
+  },
+  {
+    "name": "Musician",
+    "description": "Lives for music. Happiest with an instrument in hand.",
+    "need_modifiers": {
+      "creativity": {"decay_mult": 1.2, "satisfy_mult": 1.8},
+      "fun": {"satisfy_mult": 1.4}
+    },
+    "thought_modifiers": {"activity": 1.3},
+    "skill_multipliers": {"music": 1.5, "athletics": 0.7},
+    "grade_baseline_modifiers": {"music": 12, "art": 3, "pe": -5}
   }
 ]

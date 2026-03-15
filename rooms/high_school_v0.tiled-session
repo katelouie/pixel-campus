@@ -24,6 +24,10 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "city_terrain.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 0.2393
+        },
         "floor_connectors.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
@@ -85,7 +89,7 @@
             "scaleInEditor": 1
         }
     },
-    "last.imagePath": "/Users/katelouie/code/pixel-campus/assets/packs/modernexteriors-win/Modern_Exteriors_48x48/ME_Theme_Sorter_48x48/13_School_Singles_48x48",
+    "last.imagePath": "/Users/katelouie/code/pixel-campus/assets/packs/modernexteriors-win/Modern_Exteriors_48x48/Animated_48x48/Animated_sheets_48x48",
     "map.height": 100,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 48,
@@ -97,6 +101,7 @@
     ],
     "project": "high_school_v0.tiled-project",
     "recentFiles": [
+        "city_terrain.tsx",
         "room_builder.tsx",
         "arched_entryways.tsx",
         "borders.tsx",
@@ -107,8 +112,7 @@
         "baseboards.tsx",
         "floor_connectors.tsx",
         "floor_shadows.tsx",
-        "home_wood_14x13.tmx",
-        "home_wood_14x15.tmx"
+        "home_wood_14x13.tmx"
     ],
     "resizeMap.removeObjects": false,
     "tileset.lastUsedFormat": "tsx",

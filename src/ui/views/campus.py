@@ -15,24 +15,22 @@ import arcade
 from src.sim.engine import GameState
 from src.sim.models import StudentState
 from src.ui.hud import HUD
-from src.ui.sprites import StudentSprite
+from src.ui.sprites import SIT_TYPE_BY_PREFIX, StudentSprite
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 TMX_PATH = str(_PROJECT_ROOT / "rooms" / "high_school_v0.tmx")
 MAP_SCALE = 1.0
 CAMERA_SPEED = 10.0
+ZOOM_STEP = 0.1
+ZOOM_MIN = 0.3
+ZOOM_MAX = 3.0
+AUTO_RUN_INTERVAL = 12.0  # seconds between auto ticks
 
-CHARACTER_SHEETS: list[str] = ["Adam", "Alex", "Amelia", "Bob"]
+# Premade character sheet numbers to use (1-20 available)
+CHARACTER_SHEET_NUMS: list[int] = list(range(1, 21))
 
-# Maps sit point type prefix → sim room name (must match DEFAULT_ROOMS names exactly)
-_SIT_PREFIX_TO_ROOM: dict[str, str] = {
-    "sit_desk": "Math Classroom",
-    "sit_cafeteria": "Cafeteria",
-    "sit_computer": "Computer Lab",
-    "sit_library": "Library",
-    "sit_gym": "Gym",
-    "sit_stands": "Gym",
-}
+# _SIT_PREFIX_TO_ROOM is built dynamically from state.rooms in CampusView.__init__
+# (each Room has a sit_prefixes list loaded from rooms.json)
 
 
 class CampusView(arcade.View):
@@ -70,7 +68,10 @@ class CampusView(arcade.View):
             self._spawn_points = [(400.0, 400.0)]
 
         # --- Sit points: name → (x, y, facing) ---
+        # Stand points share the same layer but use idle animation instead of sitting.
+        # Detected by "stand" in the object name or class/type field.
         self._sit_points: dict[str, tuple[float, float, str]] = {}
+        self._stand_point_names: set[str] = set()
         for obj in self._tile_map.object_lists.get("Sit", []):
             facing = obj.properties.get("facing", "south") if obj.properties else "south"
             self._sit_points[obj.name] = (
@@ -78,6 +79,9 @@ class CampusView(arcade.View):
                 float(obj.shape[1]),
                 facing,
             )
+            obj_class = (obj.type or "") if hasattr(obj, "type") else ""
+            if "stand_" in obj.name.lower() or "stand_" in obj_class.lower():
+                self._stand_point_names.add(obj.name)
 
         # --- Explicit room centers from a "RoomCenters" object layer ---
         self._explicit_room_centers: dict[str, tuple[float, float]] = {}
@@ -88,11 +92,25 @@ class CampusView(arcade.View):
                     float(obj.shape[1]),
                 )
 
+        # Build sit prefix → room name map from the sim's loaded room data
+        self._sit_prefix_to_room: dict[str, str] = {
+            prefix: room.name
+            for room in self._state.rooms
+            for prefix in room.sit_prefixes
+        }
+
         # Room centers: explicit points win; fall back to sit point centroids
         self._room_centers: dict[str, tuple[float, float]] = (
             self._compute_room_centers()
         )
         print("Room centers loaded:", list(self._room_centers.keys()))
+
+        # Sit point management: room → sit point names, and per-student assignments
+        self._room_sit_points: dict[str, list[str]] = self._build_room_sit_points()
+        self._claimed_sit_points: dict[str, int | None] = {
+            name: None for name in self._sit_points
+        }
+        self._student_sit_point: dict[int, str | None] = {}
 
         # --- Students ---
         self._student_sprites: dict[int, StudentSprite] = {}
@@ -137,7 +155,7 @@ class CampusView(arcade.View):
         # --- HUD ---
         self._hud = HUD(self.window.width, self.window.height)
         self._hud.push_messages(
-            ["Welcome to Pixel Campus! SPACE to advance time. Arrow keys to pan."]
+            ["Welcome to Pixel Campus! SPACE: tick | P: auto-run | +/-: zoom | arrows: pan"]
         )
 
         self._selected_sprite: StudentSprite | None = None
@@ -146,15 +164,47 @@ class CampusView(arcade.View):
             s.student_id: None for s in self._state.students
         }
 
+        # Auto-run
+        self._auto_run: bool = False
+        self._auto_run_timer: float = 0.0
+
     # ------------------------------------------------------------------
     # Setup helpers
     # ------------------------------------------------------------------
+
+    def _build_room_sit_points(self) -> dict[str, list[str]]:
+        """Group sit point names by room, using the same prefix mapping as _SIT_PREFIX_TO_ROOM."""
+        by_room: dict[str, list[str]] = defaultdict(list)
+        for name in self._sit_points:
+            for prefix, room_name in self._sit_prefix_to_room.items():
+                if name.startswith(prefix):
+                    by_room[room_name].append(name)
+                    break
+        return dict(by_room)
+
+    def _pick_sit_point(self, room_name: str, student_id: int) -> str | None:
+        """Claim and return a random available sit point in the given room, or None if full."""
+        available = [
+            sp for sp in self._room_sit_points.get(room_name, [])
+            if self._claimed_sit_points.get(sp) is None
+        ]
+        if not available:
+            return None
+        sp_name = random.choice(available)
+        self._claimed_sit_points[sp_name] = student_id
+        return sp_name
+
+    def _release_sit_point(self, student_id: int) -> None:
+        """Release whatever sit point this student currently holds."""
+        sp = self._student_sit_point.pop(student_id, None)
+        if sp and self._claimed_sit_points.get(sp) == student_id:
+            self._claimed_sit_points[sp] = None
 
     def _compute_room_centers(self) -> dict[str, tuple[float, float]]:
         """Compute room centers: explicit RoomCenters points win, fall back to sit centroids."""
         by_room: dict[str, list[tuple[float, float]]] = defaultdict(list)
         for name, (x, y, _) in self._sit_points.items():
-            for prefix, room_name in _SIT_PREFIX_TO_ROOM.items():
+            for prefix, room_name in self._sit_prefix_to_room.items():
                 if name.startswith(prefix):
                     by_room[room_name].append((x, y))
                     break
@@ -170,28 +220,29 @@ class CampusView(arcade.View):
         return centers
 
     def _dispatch_morning(self) -> None:
-        """Send every idle student to a room based on their favourite skill."""
-        skill_to_room = {
-            "academics": "Math Classroom",
-            "athletics": "Gym",
-            "creativity": "Art Room",
-            "social": "Cafeteria",
-            "music": "Music Room",
-        }
-        for student in self._state.students:
-            room_name = skill_to_room.get(student.favorite_skill.value, "Quad")
-            room = self._state.get_room_by_name(room_name)
-            if room:
-                self._state.assign_student(student, room)
+        """Send every idle student to a random room that boosts their favourite skill."""
+        from src.sim.models import Skill
 
-    def _build_student_sprites(self, char_textures: dict[str, dict]) -> None:
+        for student in self._state.students:
+            skill = student.favorite_skill
+            # Flirt students prefer social rooms (Quad, Cafeteria)
+            if skill == Skill.FLIRT:
+                skill = Skill.SOCIAL
+
+            candidates = [r for r in self._state.rooms if r.skill_boost == skill]
+            if not candidates:
+                candidates = self._state.rooms  # last resort: any room
+            room = random.choice(candidates)
+            self._state.assign_student(student, room)
+
+    def _build_student_sprites(self, char_textures: dict[int, dict]) -> None:
         for i, student in enumerate(self._state.students):
-            sheet_name = CHARACTER_SHEETS[i % len(CHARACTER_SHEETS)]
-            sprite = StudentSprite(student, char_textures[sheet_name])
+            sheet_num = CHARACTER_SHEET_NUMS[i % len(CHARACTER_SHEET_NUMS)]
+            sprite = StudentSprite(student, char_textures[sheet_num])
 
             sx, sy = self._spawn_points[i % len(self._spawn_points)]
-            sprite.center_x = sx + random.uniform(-30, 30)
-            sprite.center_y = sy + random.uniform(-20, 20)
+            sprite.center_x = sx + random.uniform(-12, 12)
+            sprite.center_y = sy + random.uniform(-8, 8)
 
             self._student_sprites[student.student_id] = sprite
             self._sprite_list.append(sprite)
@@ -218,6 +269,8 @@ class CampusView(arcade.View):
     # ------------------------------------------------------------------
 
     def on_update(self, delta_time: float) -> None:
+        self._scene.update_animation(delta_time)
+
         for sid, sprite in self._student_sprites.items():
             sprite.update_movement()
             self._physics_engines[sid].update()
@@ -229,23 +282,46 @@ class CampusView(arcade.View):
             if self._mood_labels[sid].text != new_icon:
                 self._mood_labels[sid].text = new_icon
 
+            # Trigger sit/stand animation when student arrives at their assigned point
+            if not sprite.is_walking and not sprite.is_stationed:
+                sp_name = self._student_sit_point.get(sid)
+                if sp_name:
+                    _, _, facing = self._sit_points[sp_name]
+                    if sp_name in self._stand_point_names:
+                        sprite.set_standing_at(facing)
+                    else:
+                        sit_type = next(
+                            (t for prefix, t in SIT_TYPE_BY_PREFIX.items() if sp_name.startswith(prefix)),
+                            "b",
+                        )
+                        sprite.set_sitting(facing, sit_type)
+
         # Camera panning with arrow keys
+        pan = CAMERA_SPEED / self._camera.zoom  # pan speed adjusts with zoom
         cx, cy = self._camera.position
         if arcade.key.LEFT in self._camera_keys:
-            cx -= CAMERA_SPEED
+            cx -= pan
         if arcade.key.RIGHT in self._camera_keys:
-            cx += CAMERA_SPEED
+            cx += pan
         if arcade.key.UP in self._camera_keys:
-            cy += CAMERA_SPEED
+            cy += pan
         if arcade.key.DOWN in self._camera_keys:
-            cy -= CAMERA_SPEED
+            cy -= pan
         self._camera.position = arcade.Vec2(cx, cy)
+
+        # Auto-run: advance sim on a timer
+        if self._auto_run:
+            self._auto_run_timer += delta_time
+            if self._auto_run_timer >= AUTO_RUN_INTERVAL:
+                self._auto_run_timer = 0.0
+                logs = self._state.tick()
+                self._hud.push_messages(logs)
+                self._sync_sprites_to_sim()
 
     def on_draw(self) -> None:
         self.clear()
         with self._camera.activate():
             self._scene.draw()
-            self._walls.draw()  # DEBUG: show collision boxes
             self._sprite_list.draw()
             self._draw_student_labels()
             if self._selected_sprite:
@@ -279,9 +355,24 @@ class CampusView(arcade.View):
                 all_logs.extend(self._state.tick())
             self._hud.push_messages(all_logs)
             self._sync_sprites_to_sim()
+        elif symbol == arcade.key.P:
+            self._auto_run = not self._auto_run
+            self._auto_run_timer = 0.0
+            self._hud.push_messages(
+                [f"Auto-run {'ON' if self._auto_run else 'OFF'} (P to toggle)"]
+            )
+        elif symbol in (arcade.key.EQUAL, arcade.key.NUM_ADD):
+            self._camera.zoom = min(ZOOM_MAX, round(self._camera.zoom + ZOOM_STEP, 2))
+        elif symbol in (arcade.key.MINUS, arcade.key.NUM_SUBTRACT):
+            self._camera.zoom = max(ZOOM_MIN, round(self._camera.zoom - ZOOM_STEP, 2))
 
     def on_key_release(self, symbol: int, modifiers: int) -> None:
         self._camera_keys.discard(symbol)
+
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
+        self._camera.zoom = max(
+            ZOOM_MIN, min(ZOOM_MAX, round(self._camera.zoom + scroll_y * ZOOM_STEP, 2))
+        )
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if button != arcade.MOUSE_BUTTON_LEFT:
@@ -380,19 +471,24 @@ class CampusView(arcade.View):
     def _sync_sprites_to_sim(self) -> None:
         for student in self._state.students:
             sprite = self._student_sprites[student.student_id]
-            prev_dest = self._prev_destinations.get(student.student_id)
+            sid = student.student_id
+            prev_dest = self._prev_destinations.get(sid)
             curr_dest = student.destination.name if student.destination else None
 
             # Start walking as soon as destination is assigned (not when they arrive)
             if curr_dest and curr_dest != prev_dest:
-                if curr_dest in self._room_centers:
+                self._release_sit_point(sid)
+                sp_name = self._pick_sit_point(curr_dest, sid)
+                if sp_name:
+                    self._student_sit_point[sid] = sp_name
+                    sx, sy, _ = self._sit_points[sp_name]
+                    self._path_to(sprite, (sx, sy))
+                elif curr_dest in self._room_centers:
+                    # Room is full — walk to center and stand
                     cx, cy = self._room_centers[curr_dest]
-                    dest = (cx + random.uniform(-30, 30), cy + random.uniform(-20, 20))
-                    self._path_to(sprite, dest)
-                else:
-                    print(f"{student.name} → {curr_dest}: NO ROOM CENTER, not moving")
+                    self._path_to(sprite, (cx + random.uniform(-30, 30), cy + random.uniform(-20, 20)))
 
-            if student.state == StudentState.IDLE and not sprite.is_walking:
+            if student.state == StudentState.IDLE and not sprite.is_walking and not sprite.is_stationed:
                 sprite.stop()
 
-            self._prev_destinations[student.student_id] = curr_dest
+            self._prev_destinations[sid] = curr_dest

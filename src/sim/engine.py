@@ -42,83 +42,6 @@ from .thoughts import (
     thought_slept_well,
 )
 
-DEFAULT_ROOMS: list[Room] = [
-    Room(
-        name="Library",
-        skill_boost=Skill.ACADEMICS,
-        boost_per_tick=1.5,
-        needs_satisfied={"academics": 2.0, "fun": -0.3},
-        description="Quiet study spot. Academics soar, but restless students get bored.",
-        position=(0, 0),
-    ),
-    Room(
-        name="Art Room",
-        skill_boost=Skill.CREATIVITY,
-        boost_per_tick=1.5,
-        needs_satisfied={"creativity": 2.0, "fun": 1.0},
-        description="Paints, clay, and self-expression.",
-        position=(2, 0),
-    ),
-    Room(
-        name="Gym",
-        skill_boost=Skill.ATHLETICS,
-        boost_per_tick=1.5,
-        needs_satisfied={"athletics": 2.0, "rest": -0.5},
-        description="Hoops, laps, and pickup games.",
-        position=(0, 2),
-    ),
-    Room(
-        name="Cafeteria",
-        skill_boost=Skill.SOCIAL,
-        boost_per_tick=1.0,
-        needs_satisfied={"social": 1.5, "fun": 1.0},
-        description="Lunch tables and gossip. Everyone's mood lifts. Drama brews.",
-        position=(2, 2),
-    ),
-    Room(
-        name="Math Classroom",
-        skill_boost=Skill.ACADEMICS,
-        boost_per_tick=2.0,
-        needs_satisfied={"academics": 2.5, "fun": -0.5},
-        description="Desks, equations, and the quiet scratch of pencils.",
-        position=(0, 1),
-    ),
-    Room(
-        name="Computer Lab",
-        skill_boost=Skill.ACADEMICS,
-        boost_per_tick=1.5,
-        needs_satisfied={"academics": 1.5, "fun": 0.5},
-        description="Rows of screens. Research, coding, and the occasional game.",
-        position=(2, 1),
-    ),
-    Room(
-        name="Music Room",
-        skill_boost=Skill.MUSIC,
-        boost_per_tick=2.0,
-        needs_satisfied={"creativity": 1.5, "fun": 1.5},
-        description="Instruments, sheet music, and occasional cacophony.",
-        position=(1, 3),
-    ),
-    Room(
-        name="Quad",
-        skill_boost=Skill.SOCIAL,
-        boost_per_tick=0.5,
-        needs_satisfied={"social": 2.0, "fun": 1.5, "rest": 0.5},
-        description="Open air and open conversations. The social heart of campus.",
-        position=(1, 1),
-    ),
-]
-
-DEFAULT_NAMES: list[str] = [
-    "Alex",
-    "Jordan",
-    "Casey",
-    "Morgan",
-    "Riley",
-    "Quinn",
-    "Sage",
-    "Rowan",
-]
 
 REPORT_CARD_INTERVAL: int = 7  # days between report cards
 
@@ -174,8 +97,9 @@ class GameState:
         defs = GameDefs.load(data_dir, scenario_path=scenario_path)
         scenario = defs.scenario
 
-        # Use loaded rooms or fall back to hardcoded defaults
-        rooms = defs.rooms if defs.rooms else list(DEFAULT_ROOMS)
+        if not defs.rooms:
+            raise ValueError("No rooms loaded — check that rooms.json exists in the data directory.")
+        rooms = defs.rooms
 
         # Use loaded events or fall back to hardcoded defaults
         if defs.events:
@@ -185,18 +109,46 @@ class GameState:
         # Student count: explicit param > scenario > default 8
         actual_num_students = num_students or scenario.num_students
 
-        # Student names: scenario > hardcoded defaults
-        name_pool = scenario.student_names if scenario.student_names else DEFAULT_NAMES
-        names = random.sample(name_pool, min(actual_num_students, len(name_pool)))
-        while len(names) < actual_num_students:
-            names.append(f"Student {len(names) + 1}")
+        # Load name pools: scenario override > shared names.json > empty
+        if scenario.student_names:
+            # Legacy flat list: treat all as unisex
+            _names_data = {"male": [], "female": [], "unisex": scenario.student_names}
+        else:
+            names_file = effective_data_dir / "names.json"
+            if names_file.exists():
+                import json as _json
+                _names_data = _json.loads(names_file.read_text())
+            else:
+                _names_data = {}
+
+        _male_pool   = _names_data.get("male", []) + _names_data.get("unisex", [])
+        _female_pool = _names_data.get("female", []) + _names_data.get("unisex", [])
+        _nb_pool     = _names_data.get("male", []) + _names_data.get("female", []) + _names_data.get("unisex", [])
+
+        from .models import Gender as _Gender
+        _genders = [random.choice(list(_Gender)) for _ in range(actual_num_students)]
+        _used: set[str] = set()
+        names: list[str] = []
+        for g in _genders:
+            pool = (
+                _male_pool   if g == _Gender.MALE   else
+                _female_pool if g == _Gender.FEMALE else
+                _nb_pool
+            )
+            available = [n for n in pool if n not in _used]
+            if available:
+                name = random.choice(available)
+                _used.add(name)
+                names.append(name)
+            else:
+                names.append(f"Student {len(names) + 1}")
 
         # Build the trait pool for random assignment
         available_traits = defs.traits if defs.traits else []
 
         students = []
-        for i, name in enumerate(names):
-            student = Student(name=name, student_id=i)
+        for i, (name, gender) in enumerate(zip(names, _genders)):
+            student = Student(name=name, student_id=i, gender=gender)
 
             # Assign 1-2 random traits (if available)
             if available_traits:
