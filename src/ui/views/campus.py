@@ -103,7 +103,6 @@ class CampusView(arcade.View):
         self._room_centers: dict[str, tuple[float, float]] = (
             self._compute_room_centers()
         )
-        print("Room centers loaded:", list(self._room_centers.keys()))
 
         # Sit point management: room → sit point names, and per-student assignments
         self._room_sit_points: dict[str, list[str]] = self._build_room_sit_points()
@@ -251,8 +250,9 @@ class CampusView(arcade.View):
                 student.name,
                 x=sprite.center_x,
                 y=sprite.top + 12,
-                color=arcade.color.WHITE,
+                color=arcade.color.BLACK,
                 font_size=9,
+                font_name="Monaco",
                 anchor_x="center",
             )
             self._mood_labels[student.student_id] = arcade.Text(
@@ -462,7 +462,6 @@ class CampusView(arcade.View):
         sc = (int(start[0] // gs), int(start[1] // gs))
         dc = (int(dest[0] // gs), int(dest[1] // gs))
         path = self._astar(start, dest)
-        print(f"A* {sc}→{dc}: {'path len=' + str(len(path)) if path else 'NO PATH'}")
         if path:
             sprite.set_path(path)
         else:
