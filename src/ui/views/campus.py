@@ -101,6 +101,9 @@ class CampusView(arcade.View):
                 ys = [p[1] for p in obj.shape]
                 self._room_bounds[obj.name] = (min(xs), max(xs), min(ys), max(ys))
 
+        # Fast name → Room lookup for click-to-send
+        self._room_by_name: dict[str, object] = {r.name: r for r in self._state.rooms}
+
         # Build sit prefix → room name map from the sim's loaded room data
         self._sit_prefix_to_room: dict[str, str] = {
             prefix: room.name
@@ -131,7 +134,23 @@ class CampusView(arcade.View):
             if sp_name in self._sit_points:
                 _counter[sp_name] = _counter.get(sp_name, 0) + 1
                 sp_name = f"{sp_name}_{_counter[sp_name]}"
-            self._sit_points[sp_name] = (ox, oy, facing)
+            # Sit-pose tile objects: nudge the navigation target so the student
+            # lands on the seat rather than at the tile center.
+            # Y: chair seats sit above the tile center; offset up slightly.
+            # X: avoid chair backs — west-facing sits nudge left, east-facing nudge right.
+            SIT_Y_OFFSET = 16   # pixels up; tune if student looks too high/low
+            SIT_X_OFFSET = 10   # pixels; tune if student clips chair back
+            if pose == "sit":
+                adjusted_y = oy + SIT_Y_OFFSET
+                if facing == "west":
+                    adjusted_x = ox - SIT_X_OFFSET
+                elif facing == "east":
+                    adjusted_x = ox + SIT_X_OFFSET
+                else:
+                    adjusted_x = ox
+            else:
+                adjusted_x, adjusted_y = ox, oy
+            self._sit_points[sp_name] = (adjusted_x, adjusted_y, facing)
             self._action_spot_props[sp_name] = {"pose": pose, "facing": facing, "activity": activity}
             if pose == "stand":
                 self._stand_point_names.add(sp_name)
@@ -352,7 +371,7 @@ class CampusView(arcade.View):
                     ap = self._action_spot_props.get(sp_name, {})
                     pose     = ap.get("pose", "stand" if sp_name in self._stand_point_names else "sit")
                     activity = ap.get("activity", "")
-                    if pose == "stand" and activity == "throw":
+                    if pose == "stand" and activity in ("throw", "basketball"):
                         sprite.set_throwing(facing)
                     elif pose == "stand" or sp_name in self._stand_point_names:
                         sprite.set_standing_at(facing)
@@ -458,6 +477,14 @@ class CampusView(arcade.View):
             self._hud.push_messages(
                 [f"Selected {self._selected_sprite.student.name}."]
             )
+        elif self._selected_sprite is not None:
+            # Click on empty space while a student is selected → send to room if inside one
+            room_name = self._room_containing(world_x, world_y)
+            room = self._room_by_name.get(room_name) if room_name else None
+            if room is not None:
+                msg = self._state.assign_student(self._selected_sprite.student, room)
+                self._hud.push_messages([msg])
+                self._sync_sprites_to_sim()
         else:
             self._selected_sprite = None
 
