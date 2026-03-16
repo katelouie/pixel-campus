@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import arcade
+from PIL import Image as _PILImage
 
 from src.sim.engine import GameState
 from src.sim.models import StudentState
@@ -19,6 +20,66 @@ from src.ui.sprites import SIT_TYPE_BY_PREFIX, StudentSprite
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 TMX_PATH = str(_PROJECT_ROOT / "rooms" / "high_school_v0.tmx")
+
+_EMOTES_PATH = (
+    _PROJECT_ROOT
+    / "assets/packs/moderninteriors-win/4_user_interface_elements"
+    / "UI_thinking_emotes_animation_48x48.png"
+)
+_EMOTE_TILE = 48
+_BUBBLE_SCALE = 0.6   # renders at ~29px — comfortable above name label
+
+# Timing constants for bubble animation phases
+_DOTS_FRAME_DUR = 0.07   # seconds per dots frame (~14fps)
+_GROW_FRAME_DUR = 0.10   # seconds per grow frame (~10fps)
+_PULSE_DUR      = 0.6    # seconds per pulse frame (slow relaxed swap)
+
+# activity → (even_col, row); odd_col = even_col + 1 is the alternate pulse frame
+_ACTIVITY_ICON: dict[str, tuple[int, int]] = {
+    "classwork": (2, 6),  # yellow ? — thinking/learning
+    "basketball": (0, 4), # yellow !
+    "music":      (6, 6), # musical note
+}
+
+
+class _BubbleAnim:
+    """Per-student bubble animation state machine."""
+    __slots__ = ("phase", "frame_idx", "timer", "activity", "pulse_phase")
+
+    def __init__(self) -> None:
+        self.phase: str = "hidden"  # "hidden" | "dots" | "grow" | "pulse"
+        self.frame_idx: int = 0
+        self.timer: float = 0.0
+        self.activity: str = ""
+        self.pulse_phase: bool = False
+
+    def start(self, activity: str) -> None:
+        self.phase = "dots"
+        self.frame_idx = 0
+        self.timer = 0.0
+        self.activity = activity
+        self.pulse_phase = False
+
+    def stop(self) -> None:
+        self.phase = "hidden"
+
+
+def _load_bubble_textures() -> dict:
+    """Load dots/grow animation frames and per-activity icon pairs from the emotes sheet."""
+    src = _PILImage.open(_EMOTES_PATH)
+    ts = _EMOTE_TILE
+
+    def crop(col: int, row: int) -> arcade.Texture:
+        return arcade.Texture(src.crop((col * ts, row * ts, col * ts + ts, row * ts + ts)))
+
+    return {
+        "dots": [crop(col, 1) for col in range(6)],       # row 1, cols 0-5
+        "grow": [crop(col, 2) for col in range(4)],       # row 2, cols 0-3
+        "icons": {
+            activity: [crop(col, row), crop(col + 1, row)]
+            for activity, (col, row) in _ACTIVITY_ICON.items()
+        },
+    }
 MAP_SCALE = 1.0
 CAMERA_SPEED = 10.0
 ZOOM_STEP = 0.1
@@ -191,6 +252,19 @@ class CampusView(arcade.View):
         self._name_labels: dict[int, arcade.Text] = {}
         self._mood_labels: dict[int, arcade.Text] = {}
         self._build_student_sprites(char_textures)
+
+        # --- Activity bubbles ---
+        self._bubble_textures = _load_bubble_textures()
+        self._bubble_sprites: dict[int, arcade.Sprite] = {}
+        self._bubble_anims: dict[int, _BubbleAnim] = {}
+        self._bubble_sprite_list = arcade.SpriteList()
+        _empty_bubble = arcade.Texture(_PILImage.new("RGBA", (1, 1), (0, 0, 0, 0)))
+        for student in self._state.students:
+            bubble = arcade.Sprite(_empty_bubble, scale=_BUBBLE_SCALE)
+            bubble.visible = False
+            self._bubble_sprites[student.student_id] = bubble
+            self._bubble_anims[student.student_id] = _BubbleAnim()
+            self._bubble_sprite_list.append(bubble)
 
         # One physics engine per student so each gets wall collision
         self._physics_engines: dict[int, arcade.PhysicsEngineSimple] = {
@@ -382,6 +456,53 @@ class CampusView(arcade.View):
                         )
                         sprite.set_sitting(facing, sit_type)
 
+            # Activity bubble: pop-in animation then pulsing icon when stationed
+            bubble = self._bubble_sprites[sid]
+            anim = self._bubble_anims[sid]
+            if sprite.is_stationed:
+                sp_name = self._student_sit_point.get(sid)
+                ap = self._action_spot_props.get(sp_name, {}) if sp_name else {}
+                activity = ap.get("activity", "")
+                # Only show bubble for spots with a known activity icon
+                if activity in self._bubble_textures["icons"]:
+                    if anim.phase == "hidden":
+                        anim.start(activity)
+                        bubble.visible = True
+                    # Advance animation
+                    anim.timer += delta_time
+                    if anim.phase == "dots":
+                        if anim.timer >= _DOTS_FRAME_DUR:
+                            anim.timer -= _DOTS_FRAME_DUR
+                            anim.frame_idx += 1
+                            if anim.frame_idx >= len(self._bubble_textures["dots"]):
+                                anim.phase = "grow"
+                                anim.frame_idx = 0
+                        bubble.texture = self._bubble_textures["dots"][min(anim.frame_idx, len(self._bubble_textures["dots"]) - 1)]
+                    elif anim.phase == "grow":
+                        if anim.timer >= _GROW_FRAME_DUR:
+                            anim.timer -= _GROW_FRAME_DUR
+                            anim.frame_idx += 1
+                            if anim.frame_idx >= len(self._bubble_textures["grow"]):
+                                anim.phase = "pulse"
+                                anim.frame_idx = 0
+                                anim.timer = 0.0
+                        bubble.texture = self._bubble_textures["grow"][min(anim.frame_idx, len(self._bubble_textures["grow"]) - 1)]
+                    elif anim.phase == "pulse":
+                        if anim.timer >= _PULSE_DUR:
+                            anim.timer -= _PULSE_DUR
+                            anim.pulse_phase = not anim.pulse_phase
+                        icon_frames = self._bubble_textures["icons"][anim.activity]
+                        bubble.texture = icon_frames[1 if anim.pulse_phase else 0]
+                    bubble.scale = _BUBBLE_SCALE
+                    bubble.center_x = sprite.center_x
+                    bubble.center_y = sprite.top + bubble.height // 2 + 18
+                else:
+                    bubble.visible = False
+            else:
+                if anim.phase != "hidden":
+                    anim.stop()
+                    bubble.visible = False
+
         # Camera panning with arrow keys
         pan = CAMERA_SPEED / self._camera.zoom  # pan speed adjusts with zoom
         cx, cy = self._camera.position
@@ -409,6 +530,7 @@ class CampusView(arcade.View):
         with self._camera.activate():
             self._scene.draw()
             self._sprite_list.draw()
+            self._bubble_sprite_list.draw()
             self._draw_student_labels()
             if self._selected_sprite:
                 arcade.draw_circle_outline(

@@ -11,6 +11,7 @@ from enum import Enum, auto
 from typing import Any
 
 from .needs import Need, NeedType, compute_needs_mood, create_default_needs
+from .personality import Personality
 from .thoughts import Thought, sum_thought_effects
 from .traits import Trait, combined_skill_mult
 
@@ -50,6 +51,21 @@ class Gender(Enum):
     MALE = "male"
     FEMALE = "female"
     NON_BINARY = "non_binary"
+
+
+class Year(Enum):
+    FRESHMAN  = "freshman"
+    SOPHOMORE = "sophomore"
+    JUNIOR    = "junior"
+    SENIOR    = "senior"
+
+
+_BASE_AGE_BY_YEAR: dict["Year", int] = {
+    Year.FRESHMAN:  14,
+    Year.SOPHOMORE: 15,
+    Year.JUNIOR:    16,
+    Year.SENIOR:    17,
+}
 
 
 class StudentState(Enum):
@@ -114,6 +130,8 @@ class Student:
     name: str
     student_id: int
     gender: Gender = Gender.NON_BINARY
+    year: Year = Year.FRESHMAN
+    personality: Personality | None = None
 
     # Needs system (replaces old mood_value + energy)
     needs: dict[NeedType, Need] = field(default_factory=create_default_needs)
@@ -159,6 +177,19 @@ class Student:
         needs_baseline = compute_needs_mood(self.needs)
         thought_sum = sum_thought_effects(self.thoughts)
         return max(0.0, min(100.0, needs_baseline + thought_sum))
+
+    @property
+    def age(self) -> int:
+        """Derived from school year + zodiac sign birth-month offset.
+
+        Signs born Jan–Aug are the 'older' cohort in their grade (already had
+        their birthday before the Sep 1 school-year cutoff), so they get +1.
+        Signs born Sep–Dec are the 'younger' cohort (base age).
+        """
+        base = _BASE_AGE_BY_YEAR[self.year]
+        if self.personality is not None:
+            return base + self.personality.age_offset()
+        return base
 
     @property
     def energy(self) -> float:

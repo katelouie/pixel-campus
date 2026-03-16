@@ -30,7 +30,9 @@ from .models import (
     Skill,
     Student,
     StudentState,
+    Year,
 )
+from .personality import Personality
 from .needs import NeedType, satisfy_need
 from .social import get_or_create_friendship, maybe_interact
 from .thoughts import (
@@ -148,7 +150,13 @@ class GameState:
 
         students = []
         for i, (name, gender) in enumerate(zip(names, _genders)):
-            student = Student(name=name, student_id=i, gender=gender)
+            student = Student(
+                name=name,
+                student_id=i,
+                gender=gender,
+                year=random.choice(list(Year)),
+                personality=Personality.random(),
+            )
 
             # Assign 1-2 random traits (if available)
             if available_traits:
