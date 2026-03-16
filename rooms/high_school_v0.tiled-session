@@ -12,11 +12,23 @@
             "scaleInDock": 0.6334,
             "scaleInEditor": 1
         },
+        "anim_fountain.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "arched_entryways.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "art.tsx": {
+            "scaleInDock": 0.5189,
+            "scaleInEditor": 1
+        },
         "baseboards.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "basketball_court5.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
@@ -24,9 +36,17 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "city_props.tsx": {
+            "scaleInDock": 0.8017,
+            "scaleInEditor": 1
+        },
         "city_terrain.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 0.2393
+        },
+        "classroom_furniture.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "floor_connectors.tsx": {
             "scaleInDock": 1,
@@ -40,12 +60,20 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "furniture_generic.tsx": {
+            "scaleInDock": 0.6153,
+            "scaleInEditor": 1
+        },
+        "gym.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "high_school_v0.tmx": {
-            "scale": 0.1933,
-            "selectedLayer": 2,
+            "scale": 0.319,
+            "selectedLayer": 8,
             "viewCenter": {
-                "x": 2987.5840662183136,
-                "y": 3383.3419555095707
+                "x": 626.9592476489029,
+                "y": 1420.0626959247647
             }
         },
         "home_wood_14x13.tmx": {
@@ -64,6 +92,14 @@
                 "y": 360.38222357045356
             }
         },
+        "jail.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "modernui_brown.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 2.0238
+        },
         "museum_gray_16x17.tmx": {
             "scale": 0.8052734374999999,
             "selectedLayer": 0,
@@ -80,7 +116,15 @@
                 "y": 408.55687606112053
             }
         },
+        "music.tsx": {
+            "scaleInDock": 0.3959,
+            "scaleInEditor": 1
+        },
         "room_builder.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "stands.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
@@ -90,6 +134,7 @@
         }
     },
     "last.imagePath": "/Users/katelouie/code/pixel-campus/assets/packs/modernuserinterface-win/48x48",
+    "last.objectTemplatePath": "/Users/katelouie/code/pixel-campus/rooms",
     "map.height": 100,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 48,
@@ -97,22 +142,35 @@
     "map.width": 100,
     "openFiles": [
         "high_school_v0.tmx",
-        "borders.tsx"
+        "borders.tsx",
+        "walls.tsx",
+        "floor_connectors.tsx",
+        "furniture_generic.tsx",
+        "classroom_furniture.tsx",
+        "basketball_court5.tsx",
+        "gym.tsx",
+        "jail.tsx",
+        "stands.tsx",
+        "art.tsx",
+        "music.tsx",
+        "city_props.tsx",
+        "anim_fountain.tsx",
+        "modernui_brown.tsx"
     ],
     "project": "high_school_v0.tiled-project",
     "recentFiles": [
-        "city_terrain.tsx",
-        "room_builder.tsx",
-        "arched_entryways.tsx",
-        "borders.tsx",
-        "high_school_v0.tmx",
-        "walls.tsx",
-        "3d_walls.tsx",
-        "floors.tsx",
-        "baseboards.tsx",
-        "floor_connectors.tsx",
-        "floor_shadows.tsx",
-        "home_wood_14x13.tmx"
+        "modernui_brown.tsx",
+        "anim_fountain.tsx",
+        "city_props.tsx",
+        "music.tsx",
+        "art.tsx",
+        "stands.tsx",
+        "jail.tsx",
+        "gym.tsx",
+        "basketball_court5.tsx",
+        "classroom_furniture.tsx",
+        "furniture_generic.tsx",
+        "floor_connectors.tsx"
     ],
     "resizeMap.removeObjects": false,
     "tileset.lastUsedFormat": "tsx",

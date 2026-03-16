@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="67" height="73" tilewidth="48" tileheight="48" infinite="0" nextlayerid="12" nextobjectid="226">
+<map version="1.10" tiledversion="1.12.0" orientation="orthogonal" renderorder="right-down" width="67" height="73" tilewidth="48" tileheight="48" infinite="0" nextlayerid="14" nextobjectid="256">
  <tileset firstgid="1" source="floors.tsx"/>
  <tileset firstgid="601" source="3d_walls.tsx"/>
  <tileset firstgid="2017" source="borders.tsx"/>
@@ -477,7 +477,46 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
- <objectgroup id="7" name="Collision">
+ <objectgroup id="13" name="Interactables" visible="0">
+  <object id="238" name="math_desk_15" type="action_spot" gid="4338" x="960" y="1968" width="48" height="48">
+   <properties>
+    <property name="activity" value="classwork"/>
+    <property name="facing" value="west"/>
+    <property name="pose" value="sit"/>
+   </properties>
+  </object>
+  <object id="240" template="math_desk_template.tx" type="action_spot" x="384" y="1680"/>
+  <object id="241" template="math_desk_template.tx" name="math_desk_6" x="384" y="1824"/>
+  <object id="242" template="math_desk_template.tx" name="math_desk_11" x="384" y="1968"/>
+  <object id="243" template="math_desk_template.tx" name="math_desk_2" x="528" y="1680"/>
+  <object id="244" template="math_desk_template.tx" name="math_desk_7" x="528" y="1824"/>
+  <object id="245" template="math_desk_template.tx" name="math_desk_12" x="528" y="1968"/>
+  <object id="246" template="math_desk_template.tx" name="math_desk_13" x="672" y="1968"/>
+  <object id="247" template="math_desk_template.tx" name="math_desk_8" x="672" y="1824"/>
+  <object id="248" template="math_desk_template.tx" name="math_desk_3" x="672" y="1680"/>
+  <object id="249" template="math_desk_template.tx" name="math_desk_4" x="816" y="1680"/>
+  <object id="250" template="math_desk_template.tx" name="math_desk_9" x="816" y="1824"/>
+  <object id="251" template="math_desk_template.tx" name="math_desk_14" x="816" y="1968"/>
+  <object id="252" template="math_desk_template.tx" name="math_desk_10" x="960" y="1824"/>
+  <object id="253" template="math_desk_template.tx" name="math_desk_5" x="960" y="1680"/>
+  <object id="254" name="basketball_1" type="action_spot" x="432" y="624">
+   <properties>
+    <property name="activity" value="basketball"/>
+    <property name="facing" value="west"/>
+    <property name="pose" value="stand"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="255" name="basketball_2" type="action_spot" x="624" y="624">
+   <properties>
+    <property name="activity" value="basketball"/>
+    <property name="facing" value="east"/>
+    <property name="pose" value="stand"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="7" name="Collision" visible="0">
   <object id="1" x="61.89" y="61.89" width="3042.54" height="166.627"/>
   <object id="2" x="1257.22" y="217.681" width="128.832" height="928.476"/>
   <object id="4" x="900.3" y="1108.4" width="390.8" height="77.7432"/>
@@ -516,7 +555,7 @@
   <object id="191" x="3037.41" y="306.844" width="31.0291" height="546.458"/>
   <object id="202" x="1546.51" y="1896.51" width="77.907" height="116.279"/>
  </objectgroup>
- <objectgroup id="8" name="Spawn">
+ <objectgroup id="8" name="Spawn" visible="0">
   <object id="32" name="spawn_north" type="spawn" x="1581.37" y="359.29">
    <point/>
   </object>
@@ -528,96 +567,6 @@
   <object id="56" name="sit_cafeteria19" type="sit_cafeteria" x="216.286" y="3297.48">
    <properties>
     <property name="facing" value="east"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="72" name="sit_desk4" type="sit_desk" x="401.844" y="1667.65">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="79" name="sit_desk5" type="sit_desk" x="544.853" y="1667.65">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="80" name="sit_desk2" type="sit_desk" x="692.59" y="1664.11">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="81" name="sit_desk1" type="sit_desk" x="833.235" y="1661.74">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="82" name="sit_desk3" type="sit_desk" x="977.426" y="1664.11">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="83" name="sit_desk7" type="sit_desk" x="977.426" y="1809.48">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="84" name="sit_desk9" type="sit_desk" x="832.053" y="1810.66">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="85" name="sit_desk6" type="sit_desk" x="689.044" y="1809.48">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="86" name="sit_desk8" type="sit_desk" x="543.671" y="1810.66">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="87" name="sit_desk10" type="sit_desk" x="399.48" y="1813.02">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="88" name="sit_desk12" type="sit_desk" x="400.662" y="1952.49">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="89" name="sit_desk15" type="sit_desk" x="546.035" y="1956.03">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="90" name="sit_desk14" type="sit_desk" x="689.044" y="1953.67">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="91" name="sit_desk11" type="sit_desk" x="833.235" y="1950.12">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="92" name="sit_desk13" type="sit_desk" x="978.608" y="1952.49">
-   <properties>
-    <property name="facing" value="west"/>
    </properties>
    <point/>
   </object>
@@ -816,18 +765,6 @@
   <object id="143" name="sit_stands10" type="sit_stands" x="914.306" y="314.33">
    <properties>
     <property name="facing" value="south"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="144" name="stand_basketball1" type="stand_basketball" x="419.505" y="634.636">
-   <properties>
-    <property name="facing" value="west"/>
-   </properties>
-   <point/>
-  </object>
-  <object id="145" name="stand_basketball2" type="stand_basketball" x="641.807" y="637.026">
-   <properties>
-    <property name="facing" value="east"/>
    </properties>
    <point/>
   </object>
@@ -1114,7 +1051,21 @@
    <point/>
   </object>
  </objectgroup>
- <objectgroup id="11" name="RoomCenters">
+ <objectgroup id="12" name="Rooms" visible="0">
+  <object id="226" name="Math Classroom" x="147.164" y="1538.79" width="908.701" height="572.939"/>
+  <object id="227" name="Gym" x="137.441" y="215.64" width="1120.85" height="741.706"/>
+  <object id="228" name="Library" x="1924.17" y="175.355" width="1154.03" height="781.991"/>
+  <object id="229" name="Quad" x="1206.16" y="1587.68" width="765.403" height="767.773"/>
+  <object id="230" name="Computer Lab" x="2116.11" y="1537.91" width="957.346" height="476.303"/>
+  <object id="231" name="Music Room" x="2023.7" y="2213.27" width="1052.13" height="478.673"/>
+  <object id="232" name="Art Room" x="1969.19" y="2879.15" width="1106.64" height="530.806"/>
+  <object id="233" name="Cafeteria" x="149.289" y="2305.69" width="1104.27" height="1113.74"/>
+  <object id="234" name="South Hallway" x="1395.73" y="2405.21" width="381.517" height="1049.76"/>
+  <object id="235" name="North Hallway" x="1393.36" y="244.076" width="379.147" height="1338.86"/>
+  <object id="236" name="West Hallway" x="146.919" y="1146.92" width="1244.08" height="196.682"/>
+  <object id="237" name="East Hallway" x="1779.62" y="1151.66" width="1296.21" height="189.573"/>
+ </objectgroup>
+ <objectgroup id="11" name="RoomCenters" visible="0">
   <object id="171" name="Library" type="room_center" x="2484.94" y="588.094">
    <point/>
   </object>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <tileset firstgid="1" source="classroom_furniture.tsx"/>
+ <object name="math_desk_1" type="action_spot" gid="52" width="48" height="48">
+  <properties>
+   <property name="activity" value="classwork"/>
+   <property name="facing" value="west"/>
+   <property name="pose" value="sit"/>
+  </properties>
+ </object>
+</template>

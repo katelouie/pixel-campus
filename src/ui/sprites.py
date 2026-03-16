@@ -42,6 +42,10 @@ _FACING_MAP: dict[str, str] = {
 # Sit type → sheet row (0-indexed)
 _SIT_ROW: dict[str, int] = {"a": 4, "b": 5}
 
+# Throw animation: row 12 (0-indexed), 14 frames per direction, all 4 directions
+_THROW_ROW    = 12
+THROW_FRAMES  = 14
+
 # Sit point prefix → sit type ("a"=legs visible, "b"=legs under desk)
 SIT_TYPE_BY_PREFIX: dict[str, str] = {
     "sit_desk":      "b",
@@ -110,7 +114,13 @@ def load_premade_character_textures(sheet_num: int, char_base: str) -> dict:
         for direction, col in _SIT_DIR_COL.items()
     }
 
-    return {"idle": idle_static, "idle_anim": idle_anim, "run": run, "sit_a": sit_a, "sit_b": sit_b}
+    # Row 12: throw animation, 14 frames per direction, all 4 directions
+    throw = {
+        direction: row_frames(_THROW_ROW, col * THROW_FRAMES, THROW_FRAMES)
+        for direction, col in _SHEET_DIR_COL.items()
+    }
+
+    return {"idle": idle_static, "idle_anim": idle_anim, "run": run, "sit_a": sit_a, "sit_b": sit_b, "throw": throw}
 
 
 def build_room_sprites(
@@ -149,6 +159,7 @@ class StudentSprite(arcade.Sprite):
         self.run_textures = textures["run"]
         self.sit_a_textures = textures["sit_a"]
         self.sit_b_textures = textures["sit_b"]
+        self.throw_textures = textures["throw"]
 
         # Movement
         self.target_x: float | None = None
@@ -159,6 +170,8 @@ class StudentSprite(arcade.Sprite):
         self.is_sitting = False
         self.is_stationed = False  # True when arrived at sit OR stand point
         self._sit_type: str = "b"
+        self._is_throwing: bool = False
+        self._anim_length: int = FRAMES_PER_DIRECTION
 
         # Stuck detection
         self._stuck_timer: int = 0
@@ -203,6 +216,8 @@ class StudentSprite(arcade.Sprite):
         self.change_y = 0.0
         self.anim_timer = 0
         self.anim_frame = 0
+        self._is_throwing = False
+        self._anim_length = FRAMES_PER_DIRECTION
 
     def set_standing_at(self, facing: str) -> None:
         """Stop walking and idle-animate facing a specific direction (e.g. at a whiteboard)."""
@@ -213,6 +228,8 @@ class StudentSprite(arcade.Sprite):
         self.direction = direction
         self.anim_frame = 0
         self.anim_timer = 0
+        self._is_throwing = False
+        self._anim_length = FRAMES_PER_DIRECTION
 
     def set_sitting(self, facing: str, sit_type: str = "b") -> None:
         """Switch to a sitting pose.
@@ -232,13 +249,26 @@ class StudentSprite(arcade.Sprite):
         self.is_stationed = True
         self.anim_frame = 0
         self.anim_timer = 0
+        self._is_throwing = False
+        self._anim_length = FRAMES_PER_DIRECTION
+
+    def set_throwing(self, facing: str) -> None:
+        """Play the throw animation, looping (e.g. basketball)."""
+        self.stop()
+        self.is_sitting = False
+        self.is_stationed = True
+        self._is_throwing = True
+        self._anim_length = THROW_FRAMES
+        self.direction = _FACING_MAP.get(facing, "down")
+        self.anim_frame = 0
+        self.anim_timer = 0
 
     def _advance_anim(self) -> None:
         """Tick the animation timer and advance frame if ready."""
         self.anim_timer += 1
         if self.anim_timer >= ANIMATION_SPEED:
             self.anim_timer = 0
-            self.anim_frame = (self.anim_frame + 1) % FRAMES_PER_DIRECTION
+            self.anim_frame = (self.anim_frame + 1) % self._anim_length
 
     def update_movement(self) -> None:
         """Set change_x/change_y toward target. PhysicsEngineSimple applies the move."""
@@ -250,6 +280,8 @@ class StudentSprite(arcade.Sprite):
             if self.is_sitting:
                 sit_textures = self.sit_b_textures if self._sit_type == "b" else self.sit_a_textures
                 self.texture = sit_textures[self.direction][self.anim_frame]
+            elif self._is_throwing:
+                self.texture = self.throw_textures[self.direction][self.anim_frame]
             else:
                 self.texture = self.idle_anim_textures[self.direction][self.anim_frame]
             return

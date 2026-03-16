@@ -92,6 +92,15 @@ class CampusView(arcade.View):
                     float(obj.shape[1]),
                 )
 
+        # --- Room boundary rectangles (from "Rooms" object layer) ---
+        # Used for spatial containment: derive room name from object position.
+        self._room_bounds: dict[str, tuple[float, float, float, float]] = {}
+        for obj in self._tile_map.object_lists.get("Rooms", []):
+            if obj.name and isinstance(obj.shape, list) and len(obj.shape) >= 3:
+                xs = [p[0] for p in obj.shape]
+                ys = [p[1] for p in obj.shape]
+                self._room_bounds[obj.name] = (min(xs), max(xs), min(ys), max(ys))
+
         # Build sit prefix → room name map from the sim's loaded room data
         self._sit_prefix_to_room: dict[str, str] = {
             prefix: room.name
@@ -106,6 +115,52 @@ class CampusView(arcade.View):
 
         # Sit point management: room → sit point names, and per-student assignments
         self._room_sit_points: dict[str, list[str]] = self._build_room_sit_points()
+
+        # --- Interactables layer: tile objects with class=action_spot ---
+        # Stores explicit pose/facing/activity props for new-style tile objects.
+        self._action_spot_props: dict[str, dict] = {}
+        _counter: dict[str, int] = {}
+        def _register_action_spot(name_hint: str, ox: float, oy: float, props: dict) -> None:
+            pose     = props.get("pose", "sit")
+            facing   = props.get("facing", "south")
+            activity = props.get("activity", "")
+            room_name = self._room_containing(ox, oy)
+            if room_name is None:
+                return
+            sp_name = props.get("name") or name_hint or f"iact_{int(ox)}_{int(oy)}"
+            if sp_name in self._sit_points:
+                _counter[sp_name] = _counter.get(sp_name, 0) + 1
+                sp_name = f"{sp_name}_{_counter[sp_name]}"
+            self._sit_points[sp_name] = (ox, oy, facing)
+            self._action_spot_props[sp_name] = {"pose": pose, "facing": facing, "activity": activity}
+            if pose == "stand":
+                self._stand_point_names.add(sp_name)
+            if room_name not in self._room_sit_points:
+                self._room_sit_points[room_name] = []
+            self._room_sit_points[room_name].append(sp_name)
+
+        # Tile objects → sprite_lists (Arcade splits these from shape objects)
+        for _sp in self._tile_map.sprite_lists.get("Interactables", arcade.SpriteList()):
+            _props = getattr(_sp, "properties", None) or {}
+            if _props.get("class") == "action_spot":
+                _register_action_spot(_props.get("name", ""), _sp.center_x, _sp.center_y, _props)
+
+        # Point/shape objects → object_lists
+        for obj in self._tile_map.object_lists.get("Interactables", []):
+            obj_type = (obj.type or "") if hasattr(obj, "type") else ""
+            if obj_type != "action_spot":
+                continue
+            if not isinstance(obj.shape, (tuple, list)) or len(obj.shape) < 2:
+                continue
+            if isinstance(obj.shape[0], (int, float)):
+                ox, oy = float(obj.shape[0]), float(obj.shape[1])
+            elif hasattr(obj.shape[0], "__len__"):
+                xs = [p[0] for p in obj.shape]; ys = [p[1] for p in obj.shape]
+                ox, oy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+            else:
+                continue
+            _register_action_spot(obj.name or "", ox, oy, obj.properties or {})
+
         self._claimed_sit_points: dict[str, int | None] = {
             name: None for name in self._sit_points
         }
@@ -199,6 +254,13 @@ class CampusView(arcade.View):
         if sp and self._claimed_sit_points.get(sp) == student_id:
             self._claimed_sit_points[sp] = None
 
+    def _room_containing(self, x: float, y: float) -> str | None:
+        """Return the name of the room whose bounding rect contains (x, y), or None."""
+        for name, (left, right, bottom, top) in self._room_bounds.items():
+            if left <= x <= right and bottom <= y <= top:
+                return name
+        return None
+
     def _compute_room_centers(self) -> dict[str, tuple[float, float]]:
         """Compute room centers: explicit RoomCenters points win, fall back to sit centroids."""
         by_room: dict[str, list[tuple[float, float]]] = defaultdict(list)
@@ -287,10 +349,15 @@ class CampusView(arcade.View):
                 sp_name = self._student_sit_point.get(sid)
                 if sp_name:
                     _, _, facing = self._sit_points[sp_name]
-                    if sp_name in self._stand_point_names:
+                    ap = self._action_spot_props.get(sp_name, {})
+                    pose     = ap.get("pose", "stand" if sp_name in self._stand_point_names else "sit")
+                    activity = ap.get("activity", "")
+                    if pose == "stand" and activity == "throw":
+                        sprite.set_throwing(facing)
+                    elif pose == "stand" or sp_name in self._stand_point_names:
                         sprite.set_standing_at(facing)
                     else:
-                        sit_type = next(
+                        sit_type = ap.get("sit_type") or next(
                             (t for prefix, t in SIT_TYPE_BY_PREFIX.items() if sp_name.startswith(prefix)),
                             "b",
                         )
@@ -370,9 +437,14 @@ class CampusView(arcade.View):
         self._camera_keys.discard(symbol)
 
     def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
-        self._camera.zoom = max(
-            ZOOM_MIN, min(ZOOM_MAX, round(self._camera.zoom + scroll_y * ZOOM_STEP, 2))
-        )
+        from src.ui.hud import _PANEL_W, _PANEL_H
+        if x <= _PANEL_W and y <= _PANEL_H:
+            # Scroll wheel over log panel: scroll history (up = back in time)
+            self._hud.scroll(-int(scroll_y))
+        else:
+            self._camera.zoom = max(
+                ZOOM_MIN, min(ZOOM_MAX, round(self._camera.zoom + scroll_y * ZOOM_STEP, 2))
+            )
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if button != arcade.MOUSE_BUTTON_LEFT:

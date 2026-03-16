@@ -1,6 +1,6 @@
 """HUD overlay for Pixel Campus.
 
-Draws a 9-slice top bar (clock/points) and a 9-slice log panel (bottom-left).
+Draws a banner top bar (clock/points) and a 9-slice log panel (bottom-left).
 Reads from GameState but never writes to it.
 """
 
@@ -10,42 +10,48 @@ import arcade
 from PIL import Image as _PILImage
 
 from src.sim.engine import GameState
+from src.ui.bitmap_font import BitmapFont
 
-_UI_SHEET = (
+_PAPERNOTE = (
     Path(__file__).resolve().parent.parent.parent
-    / "assets/packs/modernuserinterface-win/48x48/Modern_UI_Style_1_48x48.png"
+    / "assets/packs/Complete_UI_Essential_Pack_v2.4/11_Papernote_Theme/Sprites"
 )
-_TILE = 48
-_FONT = "Monaco"
+_FRAME_PATH  = _PAPERNOTE / "UI_Papernote_FrameStandard03.png"
+_BANNER_PATH = _PAPERNOTE / "UI_Papernote_Banner04.png"
 
-# Each corner tile has ~24px of transparent outer padding before the visible border.
-# The bottom edge tiles have ~27px transparent at the very bottom.
-# Offsetting the sprites by these amounts makes the visual border flush with the screen edge.
-_EDGE_TRANS_SIDE   = 24   # left / right / top transparent padding in corner tiles
-_EDGE_TRANS_BOTTOM = 27   # bottom transparent padding in bottom corner tiles
+_TILE = 32
+_BITMAP_SCALE = 2  # change this to resize the log font (1 = tiny, 2 = normal, 3 = large)
 
-# Log panel (bottom-left, flush with corner after offset)
-_PANEL_W = 480
+# Log panel (bottom-left, flush with screen corner)
+_PANEL_W = 608  # wide enough for comfortable reading
 _PANEL_H = 240
+
+# Inner padding between border tile and text
+_LOG_PAD = 4
 
 # Top bar (centered at top of screen)
 _TOP_BAR_W = 560
-_TOP_BAR_H = 144   # 3 tile-rows: top border + 1 center + bottom border
+_TOP_BAR_H = _TILE  # banner is exactly one tile tall
 
-# Approximate visible text area inside the panel (used for word-wrap width)
-_LOG_WRAP_CHARS = 52
+# Scrollbar drawn inside the right border tile (not the content area)
+_SCROLL_W = 6
+_SCROLL_X = _PANEL_W - _TILE + (_TILE - _SCROLL_W) // 2  # centered in right border
+
+# Wrap width: full content area (scrollbar lives in border, so no deduction needed)
+_CHAR_STEP      = (5 + 1) * _BITMAP_SCALE   # pixels per char (5px + 1px gap, scaled)
+_LOG_WRAP_CHARS = (_PANEL_W - 2 * _TILE - 2 * _LOG_PAD) // _CHAR_STEP
 
 
 def _make_nine_slice_texture(width: int, height: int) -> arcade.Texture:
-    """Compose a panel image from Style 1 nine-slice tiles (PIL, runs once at startup)."""
-    sheet = _PILImage.open(_UI_SHEET)
+    """Compose a panel from FrameStandard03 nine-slice tiles (PIL, runs once at startup)."""
+    src = _PILImage.open(_FRAME_PATH)
     ts = _TILE
 
     def crop(col: int, row: int, w: int = ts, h: int = ts) -> _PILImage.Image:
-        return sheet.crop((col * ts, row * ts, col * ts + w, row * ts + h))
+        return src.crop((col * ts, row * ts, col * ts + w, row * ts + h))
 
-    def paste(src: _PILImage.Image, x: int, y: int) -> None:
-        panel.paste(src, (x, y), src)
+    def paste(tile: _PILImage.Image, x: int, y: int) -> None:
+        panel.paste(tile, (x, y), tile)
 
     panel = _PILImage.new("RGBA", (width, height), (0, 0, 0, 0))
 
@@ -77,6 +83,28 @@ def _make_nine_slice_texture(width: int, height: int) -> arcade.Texture:
     return arcade.Texture(panel)
 
 
+def _make_banner_texture(width: int) -> arcade.Texture:
+    """Compose a horizontal banner from Banner04 three-piece tiles (left + tiled middle + right)."""
+    src = _PILImage.open(_BANNER_PATH)
+    ts = _TILE
+
+    panel = _PILImage.new("RGBA", (width, ts), (0, 0, 0, 0))
+
+    def paste(tile: _PILImage.Image, x: int) -> None:
+        panel.paste(tile, (x, 0), tile)
+
+    # Left cap
+    paste(src.crop((0, 0, ts, ts)), 0)
+    # Right cap
+    paste(src.crop((2 * ts, 0, 3 * ts, ts)), width - ts)
+    # Middle tiles (tiled, last tile clipped)
+    for x in range(ts, width - ts, ts):
+        w = min(ts, width - ts - x)
+        paste(src.crop((ts, 0, ts + w, ts)), x)
+
+    return arcade.Texture(panel)
+
+
 def _wrap(text: str, max_chars: int = _LOG_WRAP_CHARS) -> list[str]:
     """Word-wrap a message into lines of at most max_chars characters."""
     if len(text) <= max_chars:
@@ -101,81 +129,137 @@ class HUD:
     """Heads-up display drawn on top of the game view."""
 
     MAX_MESSAGES = 12
-    _LOG_LINES = 7
-    _LINE_SPACING = 16
 
     def __init__(self, screen_width: int, screen_height: int) -> None:
-        self._messages: list[str] = []
+        # Each entry is a list of wrapped lines for one message.
+        # Storing by group lets us reverse by message while preserving
+        # reading order within each message's wrapped lines.
+        self._messages: list[list[str]] = []
+        self._font = BitmapFont(scale=_BITMAP_SCALE, color=(30, 30, 30, 255))
+        # Screen-space camera: keeps HUD sprites anchored to screen coords.
+        # Camera2D.position is the world point that maps to SCREEN CENTER,
+        # so (width/2, height/2) makes world coords == screen pixel coords.
+        self._screen_camera = arcade.Camera2D()
+        self._screen_camera.position = arcade.Vec2(screen_width / 2, screen_height / 2)
 
         # --- Top bar panel (clock / points) ---
-        # Offset upward by _EDGE_TRANS_SIDE so the visible border is flush with the screen top.
-        top_tex = _make_nine_slice_texture(_TOP_BAR_W, _TOP_BAR_H)
+        top_tex = _make_banner_texture(_TOP_BAR_W)
         top_sprite = arcade.Sprite(top_tex)
         top_sprite.center_x = screen_width // 2
-        top_sprite.center_y = (
-            screen_height + _EDGE_TRANS_SIDE - _TOP_BAR_H // 2
-        )
+        top_sprite.center_y = screen_height - _TOP_BAR_H // 2
         self._top_bar_list = arcade.SpriteList()
         self._top_bar_list.append(top_sprite)
 
-        self._clock_text = arcade.Text(
-            "",
-            x=screen_width // 2,
-            y=top_sprite.center_y,
-            color=arcade.color.BLACK,
-            font_size=16,
-            font_name=_FONT,
-            anchor_x="center",
-            anchor_y="center",
-            bold=True,
-        )
+        # Clock rendered as bitmap sprite, centered in the banner
+        self._clock_cx = screen_width // 2
+        self._clock_cy = screen_height - _TOP_BAR_H // 2
+        _empty_clock = arcade.Texture(_PILImage.new("RGBA", (1, self._font.char_height), (0, 0, 0, 0)))
+        self._clock_sprite = arcade.Sprite(_empty_clock)
+        self._clock_sprite_list = arcade.SpriteList()
+        self._clock_sprite_list.append(self._clock_sprite)
 
         # --- Log panel (bottom-left, flush with screen corner) ---
-        # Offset left by _EDGE_TRANS_SIDE and down by _EDGE_TRANS_BOTTOM so the
-        # visible wooden border meets the screen edge exactly.
         log_tex = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
         log_sprite = arcade.Sprite(log_tex)
-        log_sprite.center_x = _PANEL_W // 2 - _EDGE_TRANS_SIDE
-        log_sprite.center_y = _PANEL_H // 2 - _EDGE_TRANS_BOTTOM
+        log_sprite.center_x = _PANEL_W // 2
+        log_sprite.center_y = _PANEL_H // 2
         self._log_panel_list = arcade.SpriteList()
         self._log_panel_list.append(log_sprite)
 
-        # Text starts just inside the visible border (tile - transparent + padding)
-        inner_x   = _TILE - _EDGE_TRANS_SIDE + 8           # left text margin on screen
-        inner_top = _PANEL_H - _EDGE_TRANS_BOTTOM - _TILE - 8  # y of first (newest) line
+        # Text area: just inside the border tiles, with minimal padding
+        self._inner_x   = _TILE + _LOG_PAD
+        self._inner_top = _PANEL_H - _TILE - _LOG_PAD
 
-        self._msg_lines: list[arcade.Text] = []
-        for i in range(self._LOG_LINES):
-            line = arcade.Text(
-                "",
-                x=inner_x,
-                y=inner_top - i * self._LINE_SPACING,
-                color=arcade.color.BLACK,
-                font_size=11,
-                font_name=_FONT,
-            )
-            self._msg_lines.append(line)
+        line_spacing = self._font.line_spacing
+        content_h = _PANEL_H - 2 * _TILE - 2 * _LOG_PAD
+        self._log_lines = max(1, content_h // line_spacing)
+
+        # Scroll state: 0 = newest lines, positive = scrolled back into history
+        self._scroll_offset: int = 0
+
+        # One sprite per log line — textures swapped each draw()
+        _empty = arcade.Texture(_PILImage.new("RGBA", (1, self._font.char_height), (0, 0, 0, 0)))
+        self._msg_sprites: list[arcade.Sprite] = []
+        self._msg_sprite_list = arcade.SpriteList()
+        for _ in range(self._log_lines):
+            sprite = arcade.Sprite(_empty)
+            self._msg_sprites.append(sprite)
+            self._msg_sprite_list.append(sprite)
 
     def push_messages(self, messages: list[str]) -> None:
-        """Add new log lines (word-wrapped), keeping only the most recent."""
-        wrapped: list[str] = []
+        """Add new log messages (each word-wrapped into a group), keeping MAX_MESSAGES groups."""
         for msg in messages:
-            wrapped.extend(_wrap(msg))
-        self._messages = (self._messages + wrapped)[-self.MAX_MESSAGES:]
+            self._messages.append(_wrap(msg))
+        self._messages = self._messages[-self.MAX_MESSAGES:]
+        # If not scrolled back, stay pinned to newest
+        if self._scroll_offset == 0:
+            pass  # already pinned
+        else:
+            # Keep the same relative position as history grows
+            self._scroll_offset = min(self._scroll_offset, self._max_scroll())
+
+    def scroll(self, delta: int) -> None:
+        """Scroll the log. Positive = back in history, negative = toward newest."""
+        self._scroll_offset = max(0, min(self._scroll_offset + delta, self._max_scroll()))
+
+    def _all_lines(self) -> list[str]:
+        """All log lines flattened newest-first, reading order within each message."""
+        lines: list[str] = []
+        for group in reversed(self._messages):
+            lines.extend(group)
+        return lines
+
+    def _max_scroll(self) -> int:
+        return max(0, len(self._all_lines()) - self._log_lines)
 
     def draw(self, state: GameState) -> None:
         """Update and draw all HUD elements."""
-        # Top bar
-        self._top_bar_list.draw()
-        self._clock_text.text = (
-            f"Day {state.clock.day}  |  {state.clock.time_str}  |  "
-            f"Points: {state.total_points}/{state.graduation_target}"
-        )
-        self._clock_text.draw()
+        with self._screen_camera.activate():
+            # Top bar + clock
+            self._top_bar_list.draw()
+            clock_str = (
+                f"Day {state.clock.day}  |  {state.clock.time_str}  |  "
+                f"Points: {state.total_points}/{state.graduation_target}"
+            )
+            clock_tex = self._font.get_texture(clock_str)
+            self._clock_sprite.texture = clock_tex
+            self._clock_sprite.center_x = self._clock_cx
+            self._clock_sprite.center_y = self._clock_cy
+            self._clock_sprite_list.draw()
 
-        # Log panel
-        self._log_panel_list.draw()
-        recent = list(reversed(self._messages[-self._LOG_LINES:]))
-        for i, line_text in enumerate(self._msg_lines):
-            line_text.text = recent[i] if i < len(recent) else ""
-            line_text.draw()
+            # Log panel
+            self._log_panel_list.draw()
+            all_lines = self._all_lines()
+            total = len(all_lines)
+            start = self._scroll_offset
+            display_lines = all_lines[start:start + self._log_lines]
+            line_spacing = self._font.line_spacing
+            for i, sprite in enumerate(self._msg_sprites):
+                text = display_lines[i] if i < len(display_lines) else ""
+                tex = self._font.get_texture(text)
+                sprite.texture = tex
+                sprite.center_x = self._inner_x + tex.width // 2
+                sprite.center_y = self._inner_top - i * line_spacing - tex.height // 2
+            self._msg_sprite_list.draw()
+
+            # Scrollbar (only when there's more history than fits)
+            max_scroll = self._max_scroll()
+            if max_scroll > 0:
+                track_bottom = _TILE + _LOG_PAD
+                track_top    = _PANEL_H - _TILE - _LOG_PAD
+                track_h      = track_top - track_bottom
+                thumb_h      = max(8, int(self._log_lines / total * track_h))
+                scroll_ratio = self._scroll_offset / max_scroll
+                thumb_bottom = track_top - thumb_h - int(scroll_ratio * (track_h - thumb_h))
+                # Track
+                arcade.draw_lrbt_rectangle_filled(
+                    _SCROLL_X, _SCROLL_X + _SCROLL_W,
+                    track_bottom, track_top,
+                    (180, 170, 150, 120),
+                )
+                # Thumb
+                arcade.draw_lrbt_rectangle_filled(
+                    _SCROLL_X, _SCROLL_X + _SCROLL_W,
+                    thumb_bottom, thumb_bottom + thumb_h,
+                    (80, 60, 40, 200),
+                )
