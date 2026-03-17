@@ -308,12 +308,22 @@ class GameState:
                 continue
             for i, a in enumerate(present):
                 for b in present[i + 1 :]:
-                    if random.random() < 0.03:
+                    a_social = a.state == StudentState.SOCIALIZING
+                    b_social = b.state == StudentState.SOCIALIZING
+                    if a_social and b_social:
+                        chance = 0.5   # both actively want to socialize
+                    elif a_social or b_social:
+                        chance = 0.20  # one is seeking, one is available
+                    else:
+                        chance = 0.03  # background spontaneous chance
+                    if random.random() < chance:
                         self._start_chat(a, b, room)
 
     def _start_chat(self, a: Student, b: Student, room: Room) -> None:
         """Make two students start to chat."""
-        if a.state != StudentState.IDLE or b.state != StudentState.IDLE:
+        a_available = a.state in (StudentState.IDLE, StudentState.SOCIALIZING)
+        b_available = b.state in (StudentState.IDLE, StudentState.SOCIALIZING)
+        if not (a_available and b_available):
             if random.random() > 0.15:
                 return
 
