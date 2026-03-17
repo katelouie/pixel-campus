@@ -8,6 +8,7 @@ import random
 from .models import Friendship, FriendshipLevel, Romance, RomanceLevel, Skill, Student
 from .personality import RomanceInterest
 from .thoughts import add_thought, thought_best_friend, thought_crush, thought_dating, thought_friendship_levelup
+from .traits import has_trait
 
 FRIENDSHIP_LEVEL_THRESHOLDS: dict[FriendshipLevel, int] = {
     FriendshipLevel.STRANGER: 0,
@@ -203,8 +204,10 @@ def maybe_romance(
         and friendship.level >= FriendshipLevel.CLOSE_FRIEND
     )
     base_threshold = 0.15 if slow_burn else 0.05
-    # Flirt skill can up to double the base threshold; location_boost stacks on top
-    spark_threshold = base_threshold * (1.0 + avg_flirt) * location_boost
+    # Attractive trait raises spark chance — anyone near them is more likely to catch feelings
+    attractive_boost = 1.5 if (has_trait(a, "Attractive") or has_trait(b, "Attractive")) else 1.0
+    # Flirt skill can up to double the base threshold; location + attractive stack on top
+    spark_threshold = base_threshold * (1.0 + avg_flirt) * location_boost * attractive_boost
 
     logs = []
     for student, other in ((a, b), (b, a)):

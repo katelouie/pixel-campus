@@ -35,6 +35,9 @@ class Trait:
     # {subject_str: offset} -- added to grade baseline at student creation
     grade_baseline_modifiers: dict[str, int] = field(default_factory=dict)
 
+    # Trait names that cannot coexist with this trait on the same student
+    excludes: list[str] = field(default_factory=list)
+
     def get_need_decay_mult(self, need_type_str: str) -> float:
         """Get the decay multiplier for a need type. Returns 1.0 if no modifier."""
         mods = self.need_modifiers.get(need_type_str, {})
@@ -72,6 +75,12 @@ class Trait:
         return self.grade_baseline_modifiers.get(subject_str, 0)
 
 
+def has_trait(student: object, trait_name: str) -> bool:
+    """Return True if the student has a trait with the given name."""
+    traits = getattr(student, "traits", [])
+    return any(t.name == trait_name for t in traits)
+
+
 def load_traits_from_json(data: list[dict]) -> list[Trait]:
     """Parse a list of trait dicts (from traits.json) into Trait objects."""
     traits = []
@@ -84,6 +93,7 @@ def load_traits_from_json(data: list[dict]) -> list[Trait]:
                 thought_modifiers=entry.get("thought_modifiers", {}),
                 skill_multipliers=entry.get("skill_multipliers", {}),
                 grade_baseline_modifiers=entry.get("grade_baseline_modifiers", {}),
+                excludes=entry.get("excludes", []),
             )
         )
     return traits

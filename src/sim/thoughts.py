@@ -291,6 +291,18 @@ def thought_dating(partner_name: str) -> Thought:
     )
 
 
+def thought_charmed_by(name: str) -> Thought:
+    """A Flirt interacted with someone Attractive."""
+    return Thought(
+        label=f"Can't stop thinking about {name}",
+        mood_effect=5.0,
+        duration_ticks=24,
+        ticks_remaining=24,
+        category="social",
+        stackable=True,
+    )
+
+
 def thought_good_conversation(friend_name: str) -> Thought:
     """Had a pleasant conversation with someone."""
     return Thought(

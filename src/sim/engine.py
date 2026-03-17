@@ -37,6 +37,7 @@ from .needs import NeedType, satisfy_need
 from .social import get_or_create_friendship, get_or_create_romance, maybe_interact, maybe_romance
 from .thoughts import (
     add_thought,
+    thought_charmed_by,
     thought_exhausted,
     thought_failing_subject,
     thought_grades_improving,
@@ -44,6 +45,7 @@ from .thoughts import (
     thought_lunch_social,
     thought_slept_well,
 )
+from .traits import has_trait
 
 
 REPORT_CARD_INTERVAL: int = 7  # days between report cards
@@ -167,12 +169,18 @@ class GameState:
                 personality=Personality.random(),
             )
 
-            # Assign 1-2 random traits (if available)
+            # Assign 1-2 random traits (if available), respecting mutual exclusions
             if available_traits:
                 num_traits = random.choice([1, 1, 2])  # 2/3 chance of 1, 1/3 of 2
-                student.traits = random.sample(
-                    available_traits, min(num_traits, len(available_traits))
-                )
+                first = random.choice(available_traits)
+                student.traits = [first]
+                if num_traits == 2:
+                    excluded = set(first.excludes) | {
+                        t.name for t in available_traits if first.name in t.excludes
+                    }
+                    compatible = [t for t in available_traits if t.name != first.name and t.name not in excluded]
+                    if compatible:
+                        student.traits.append(random.choice(compatible))
 
             # Initialize grades (using class defs baseline if available)
             student.grades = create_default_grades()
@@ -378,6 +386,11 @@ class GameState:
         romance_text = maybe_romance(a, b, romance_rel, friendship=rel, location_boost=location_boost)
         if romance_text:
             self.tick_log.append(romance_text)
+
+        # Flirt + Attractive interaction: Flirt gets a special charmed thought
+        for flirt, other in ((a, b), (b, a)):
+            if has_trait(flirt, "Flirt") and has_trait(other, "Attractive"):
+                add_thought(flirt.thoughts, thought_charmed_by(other.name))
 
         for person in [a, b]:
             person.state = StudentState.CHATTING
