@@ -7,7 +7,7 @@ the UI reads from them.
 
 import random
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum, IntEnum, auto
 from typing import Any
 
 from .needs import Need, NeedType, compute_needs_mood, create_default_needs
@@ -248,7 +248,7 @@ class Student:
         return self.student_id == other.student_id
 
 
-class FriendshipLevel(Enum):
+class FriendshipLevel(IntEnum):
     """Progression stages of a friendship."""
 
     STRANGER = 0
@@ -283,7 +283,7 @@ class Friendship:
         )
 
 
-class RomanceLevel(Enum):
+class RomanceLevel(IntEnum):
     """Progression stages of a romance."""
 
     PLATONIC = 0
