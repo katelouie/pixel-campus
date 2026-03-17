@@ -299,12 +299,18 @@ class RomanceLevel(Enum):
 
 @dataclass
 class Romance:
-    """The romantic bond between two students."""
+    """The directed romantic bond between two students.
+
+    Feelings are tracked independently — one student can have a crush before
+    the other reciprocates. student_id1 is always the lower ID (canonical key).
+    """
 
     student_id1: int
     student_id2: int
-    level: RomanceLevel = RomanceLevel.PLATONIC
-    affinity: int = 0  # 0-100, thresholds trigger level-ups
+    feelings_1: RomanceLevel = RomanceLevel.PLATONIC  # how id1 feels about id2
+    feelings_2: RomanceLevel = RomanceLevel.PLATONIC  # how id2 feels about id1
+    affinity_1: int = 0  # id1's affinity toward id2 (0-100)
+    affinity_2: int = 0  # id2's affinity toward id1 (0-100)
     history: list[str] = field(default_factory=list)
 
     @property
@@ -314,3 +320,37 @@ class Romance:
             min(self.student_id1, self.student_id2),
             max(self.student_id1, self.student_id2),
         )
+
+    def feelings_of(self, student_id: int) -> RomanceLevel:
+        """How the given student feels toward the other."""
+        return self.feelings_1 if student_id == self.student_id1 else self.feelings_2
+
+    def affinity_of(self, student_id: int) -> int:
+        """Affinity score for the given student."""
+        return self.affinity_1 if student_id == self.student_id1 else self.affinity_2
+
+    def set_feelings(self, student_id: int, level: RomanceLevel) -> None:
+        if student_id == self.student_id1:
+            self.feelings_1 = level
+        else:
+            self.feelings_2 = level
+
+    def add_affinity(self, student_id: int, amount: int) -> None:
+        if student_id == self.student_id1:
+            self.affinity_1 = min(100, self.affinity_1 + amount)
+        else:
+            self.affinity_2 = min(100, self.affinity_2 + amount)
+
+    @property
+    def is_mutual_crush(self) -> bool:
+        return self.feelings_1 >= RomanceLevel.CRUSH and self.feelings_2 >= RomanceLevel.CRUSH
+
+    @property
+    def is_dating(self) -> bool:
+        return self.feelings_1 == RomanceLevel.DATING and self.feelings_2 == RomanceLevel.DATING
+
+    @property
+    def is_unrequited(self) -> bool:
+        """One side has feelings, the other is still platonic."""
+        f1, f2 = self.feelings_1, self.feelings_2
+        return (f1 > RomanceLevel.PLATONIC) != (f2 > RomanceLevel.PLATONIC)

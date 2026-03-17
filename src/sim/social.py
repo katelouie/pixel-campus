@@ -6,6 +6,7 @@ level up relationships
 
 import random
 from .models import Friendship, FriendshipLevel, Romance, RomanceLevel, Skill, Student
+from .personality import RomanceInterest
 from .thoughts import add_thought, thought_best_friend, thought_friendship_levelup
 
 FRIENDSHIP_LEVEL_THRESHOLDS: dict[FriendshipLevel, int] = {
@@ -53,15 +54,25 @@ TEXT_TEMPLATES: dict[FriendshipLevel | RomanceLevel, list[str]] = {
         "{a} and {b} exchange a polite smile.",
         "{a} holds the door for {b}.",
     ],
+    "unrequited": [
+        "{a} can't stop thinking about {b}.",
+        "{a} laughs a little too hard at everything {b} says.",
+        "{b} has no idea {a} has a crush on them.",
+        "{a} wrote {b}'s name in their notebook. Classic.",
+        "{a} keeps finding excuses to walk past {b}'s locker.",
+        "{a} rehearsed what to say to {b} three times. Still said nothing.",
+    ],
     RomanceLevel.CRUSH: [
         "{a} keeps glancing at {b} when they're not looking.",
         "{b} gets flustered when {a} sits next to them.",
-        "{a} wrote {b}'s name in their notebook. Classic.",
+        "{a} and {b} keep catching each other's eye across the room.",
+        "{b} saved a seat for {a} without really thinking about it.",
     ],
     RomanceLevel.DATING: [
         "{a} and {b} are holding hands.",
         "{a} and {b} share headphones, each with one earbud.",
         "{b} left a cute note in {a}'s locker.",
+        "{a} and {b} walk to class together every morning now.",
     ],
 }
 
@@ -102,28 +113,28 @@ def load_text_from_defs(social_text: dict) -> None:
 
 
 def compatibility(a: Student, b: Student) -> float:
-    """Compatibility score based on shared traits (0.3 to 1.0).
+    """Compatibility score combining shared traits and personality preferences (0.3–1.0).
 
-    Students with the same trait get a compatibility boost.
-    Students with no traits get a neutral 0.5.
+    Traits and personality preferences contribute equally when both are present.
+    Falls back gracefully if either is missing.
     """
-    if not a.traits and not b.traits:
-        return 0.5
+    scores = []
 
+    # Trait compatibility
     a_trait_names = {t.name for t in a.traits}
     b_trait_names = {t.name for t in b.traits}
-
-    # Shared traits boost compatibility
-    shared = a_trait_names & b_trait_names
     all_traits = a_trait_names | b_trait_names
+    if all_traits:
+        shared = a_trait_names & b_trait_names
+        scores.append(0.4 + len(shared) / len(all_traits) * 0.6)
+    else:
+        scores.append(0.5)
 
-    if not all_traits:
-        return 0.5
+    # Personality preference compatibility
+    if a.personality is not None and b.personality is not None:
+        scores.append(a.personality.compatibility_score(b.personality))
 
-    # Base compatibility + bonus for shared traits
-    base = 0.4
-    shared_bonus = len(shared) / len(all_traits) * 0.6
-    return min(1.0, base + shared_bonus)
+    return min(1.0, sum(scores) / len(scores))
 
 
 def get_or_create_friendship(
@@ -136,8 +147,115 @@ def get_or_create_friendship(
     return friendships[key]
 
 
-# TODO: Create get_or_create_romances and romance interaction function or just modify
-# friendship ones to extend to romances
+def _romance_interest_compatible(a: Student, b: Student) -> bool:
+    """True if both students' romance interests are mutually compatible."""
+    if a.personality is None or b.personality is None:
+        return False
+
+    def interested_in(student: Student, other: Student) -> bool:
+        ri = student.personality.romance_interest  # type: ignore[union-attr]
+        if ri == RomanceInterest.NOBODY:
+            return False
+        if ri == RomanceInterest.EVERYONE:
+            return True
+        from .models import Gender
+        if ri == RomanceInterest.BOYS and other.gender == Gender.MALE:
+            return True
+        if ri == RomanceInterest.GIRLS and other.gender == Gender.FEMALE:
+            return True
+        if ri == RomanceInterest.NON_BINARY and other.gender == Gender.NON_BINARY:
+            return True
+        return False
+
+    return interested_in(a, b) and interested_in(b, a)
+
+
+def get_or_create_romance(
+    romances: dict[tuple[int, int], Romance], a: Student, b: Student
+) -> Romance:
+    """Get or create the Romance object between two students (lower ID first)."""
+    key = (min(a.student_id, b.student_id), max(a.student_id, b.student_id))
+    if key not in romances:
+        romances[key] = Romance(student_id1=key[0], student_id2=key[1])
+    return romances[key]
+
+
+def maybe_romance(
+    a: Student, b: Student, rel: Romance, friendship: Friendship | None = None
+) -> str | None:
+    """Resolve a romantic interaction tick. Updates directed feelings/affinity.
+
+    Returns flavor text or None if nothing notable happened.
+    Two paths trigger romance development:
+    - Spark: random chance weighted by personality compatibility (any friendship level)
+    - Slow burn: triggered when friendship is CLOSE_FRIEND or better
+    """
+    if not _romance_interest_compatible(a, b):
+        return None
+
+    compat = compatibility(a, b)
+
+    # Flirt skill boosts spark chance — average of both students', normalised 0-1
+    avg_flirt = (
+        a.skills.get(Skill.FLIRT, 0.0) + b.skills.get(Skill.FLIRT, 0.0)
+    ) / 200.0  # 0.0–1.0
+
+    # Determine if this tick has a romantic spark for each student independently
+    slow_burn = (
+        friendship is not None
+        and friendship.level >= FriendshipLevel.CLOSE_FRIEND
+    )
+    base_threshold = 0.15 if slow_burn else 0.05
+    # Flirt skill can up to double the base threshold
+    spark_threshold = base_threshold * (1.0 + avg_flirt)
+
+    logs = []
+    for student, other in ((a, b), (b, a)):
+        current = rel.feelings_of(student.student_id)
+        if current == RomanceLevel.DATING:
+            continue
+        # Roll for affinity gain this tick
+        if random.random() < spark_threshold * compat:
+            gain = int(random.uniform(3, 8) * compat)
+            rel.add_affinity(student.student_id, gain)
+            # Check for level-up
+            next_level = current.next
+            threshold = ROMANCE_LEVEL_THRESHOLDS.get(next_level, 999) if next_level else 999
+            if next_level and rel.affinity_of(student.student_id) >= threshold:
+                rel.set_feelings(student.student_id, next_level)
+                if next_level == RomanceLevel.CRUSH:
+                    logs.append(f"{student.name} has developed a crush on {other.name}.")
+
+    # Dating: only happens when BOTH have reached CRUSH and compatibility is high
+    if rel.is_mutual_crush and compat > 0.6 and random.random() < 0.1:
+        rel.set_feelings(a.student_id, RomanceLevel.DATING)
+        rel.set_feelings(b.student_id, RomanceLevel.DATING)
+        logs.append(f"{a.name} and {b.name} are officially dating!")
+
+    # Flavor text from templates
+    if rel.is_dating:
+        templates = TEXT_TEMPLATES.get(RomanceLevel.DATING, [])
+        fmt_a, fmt_b = a.name, b.name
+    elif rel.is_mutual_crush:
+        templates = TEXT_TEMPLATES.get(RomanceLevel.CRUSH, [])
+        fmt_a, fmt_b = a.name, b.name
+    elif rel.is_unrequited:
+        # Put the crusher as {a} so "can't stop thinking about {b}" reads correctly
+        templates = TEXT_TEMPLATES.get("unrequited", [])
+        crusher = a if rel.feelings_of(a.student_id) > RomanceLevel.PLATONIC else b
+        other = b if crusher is a else a
+        fmt_a, fmt_b = crusher.name, other.name
+    else:
+        templates = TEXT_TEMPLATES.get(RomanceLevel.PLATONIC, [])
+        fmt_a, fmt_b = a.name, b.name
+
+    if templates:
+        logs.append(random.choice(templates).format(a=fmt_a, b=fmt_b))
+
+    result = " ".join(logs) if logs else None
+    if result:
+        rel.history.append(result)
+    return result
 
 
 def maybe_interact(a: Student, b: Student, rel: Friendship) -> str | None:

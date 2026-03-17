@@ -34,7 +34,7 @@ from .models import (
 )
 from .personality import Personality
 from .needs import NeedType, satisfy_need
-from .social import get_or_create_friendship, maybe_interact
+from .social import get_or_create_friendship, get_or_create_romance, maybe_interact, maybe_romance
 from .thoughts import (
     add_thought,
     thought_exhausted,
@@ -319,6 +319,12 @@ class GameState:
 
         rel = get_or_create_friendship(self.friendships, a, b)
         text = maybe_interact(a, b, rel)
+
+        # Romance tick: runs alongside friendship, weighted by compatibility
+        romance_rel = get_or_create_romance(self.romances, a, b)
+        romance_text = maybe_romance(a, b, romance_rel, friendship=rel)
+        if romance_text:
+            self.tick_log.append(romance_text)
 
         for person in [a, b]:
             person.state = StudentState.CHATTING
