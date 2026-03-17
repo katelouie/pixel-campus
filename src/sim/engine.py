@@ -322,7 +322,8 @@ class GameState:
 
         # Romance tick: runs alongside friendship, weighted by compatibility
         romance_rel = get_or_create_romance(self.romances, a, b)
-        romance_text = maybe_romance(a, b, romance_rel, friendship=rel)
+        location_boost = 1.5 if room.name == "Quad" else 1.0
+        romance_text = maybe_romance(a, b, romance_rel, friendship=rel, location_boost=location_boost)
         if romance_text:
             self.tick_log.append(romance_text)
 

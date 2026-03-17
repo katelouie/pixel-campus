@@ -181,7 +181,8 @@ def get_or_create_romance(
 
 
 def maybe_romance(
-    a: Student, b: Student, rel: Romance, friendship: Friendship | None = None
+    a: Student, b: Student, rel: Romance, friendship: Friendship | None = None,
+    location_boost: float = 1.0,
 ) -> str | None:
     """Resolve a romantic interaction tick. Updates directed feelings/affinity.
 
@@ -206,8 +207,8 @@ def maybe_romance(
         and friendship.level >= FriendshipLevel.CLOSE_FRIEND
     )
     base_threshold = 0.15 if slow_burn else 0.05
-    # Flirt skill can up to double the base threshold
-    spark_threshold = base_threshold * (1.0 + avg_flirt)
+    # Flirt skill can up to double the base threshold; location_boost stacks on top
+    spark_threshold = base_threshold * (1.0 + avg_flirt) * location_boost
 
     logs = []
     for student, other in ((a, b), (b, a)):
