@@ -246,6 +246,10 @@ def resolve_conversation(
 
     Updates affinity, skills, social need, and thoughts. Returns flavor text.
     """
+    # First meeting: talking to anyone moves you from Stranger to Acquaintance immediately
+    if rel.level == FriendshipLevel.STRANGER:
+        rel.level = FriendshipLevel.ACQUAINTANCE
+
     outcome = evaluate_topic(a, b, topic)
 
     # Affinity gain

@@ -1,7 +1,8 @@
 """Student profile view -- full detail panel for a selected student.
 
 Shows portrait, identity, needs, skills, grades, personality preferences,
-recent thoughts, and journal entries. ESC returns to campus view.
+recent thoughts, and journal entries. A second tab shows all relationships.
+ESC returns to campus view.
 
 All text is built into arcade.Text objects once in on_show_view so that
 on_draw never calls the slow arcade.draw_text() path.
@@ -13,7 +14,7 @@ import arcade
 
 from src.sim.academics import Subject
 from src.sim.engine import GameState
-from src.sim.models import Skill, Student
+from src.sim.models import FriendshipLevel, RomanceLevel, Skill, Student
 from src.sim.needs import NeedType
 from src.sim.personality import fmt_romance_interests
 from src.ui.hud import _make_nine_slice_texture
@@ -28,8 +29,9 @@ _CLOSE_BTN_SIZE = 28   # render size (Button01 is 32px, scale down slightly)
 _PANEL_W = 1020
 _PANEL_H = 620
 _BORDER  = 36   # nine-slice border + inner padding
+_TAB_H   = 26   # tab strip height at top of inner area
 
-# Column x-offsets from inner_left
+# Column x-offsets from inner_left (profile tab)
 _COL1_W = 180
 _COL2_X = _COL1_W + 20
 _COL2_W = 280
@@ -44,6 +46,8 @@ _LABEL_COLOR  = (40,  30,  20,  255)
 _DIM_COLOR    = (80,  70,  55,  200)
 _HEADER_COLOR = (30,  20,  10,  255)
 _BAR_BG       = (190, 180, 165, 200)
+_TAB_ACTIVE_BG = (220, 210, 190, 220)
+_TAB_INACTIVE  = (120, 110,  90, 160)
 
 _NEED_COLORS: dict[NeedType, tuple] = {
     NeedType.REST:       ( 70, 130, 180, 255),
@@ -62,6 +66,20 @@ _GRADE_COLORS: dict[str, tuple] = {
     "C": (218, 165,  32, 255),
     "D": (255, 140,   0, 255),
     "F": (210,  70,  70, 255),
+}
+
+_FRIENDSHIP_COLORS: dict[FriendshipLevel, tuple] = {
+    FriendshipLevel.STRANGER:      (130, 120, 100, 180),
+    FriendshipLevel.ACQUAINTANCE:  (160, 140,  90, 220),
+    FriendshipLevel.FRIEND:        ( 80, 160,  90, 255),
+    FriendshipLevel.CLOSE_FRIEND:  ( 80, 130, 200, 255),
+    FriendshipLevel.BEST_FRIEND:   (200, 160,  40, 255),
+}
+
+_ROMANCE_COLORS: dict[RomanceLevel, tuple] = {
+    RomanceLevel.PLATONIC: (130, 120, 100, 160),
+    RomanceLevel.CRUSH:    (220, 100, 140, 255),
+    RomanceLevel.DATING:   (210,  50,  90, 255),
 }
 
 
@@ -94,15 +112,25 @@ class ProfileView(arcade.View):
         self._panel_left   = 0
         self._panel_bottom = 0
 
-        # Pre-built render data (populated in on_show_view)
-        self._texts:    list[arcade.Text]  = []
-        self._bar_rects: list[tuple]       = []  # (x1, x2, y1, y2, color)
-        self._lines:     list[tuple]       = []  # (x1, y, x2, y, color)
+        # Tab state
+        self._active_tab: str = "profile"  # "profile" | "relationships"
+        self._tab_rects: dict[str, tuple] = {}  # name → (x1, y1, x2, y2)
+        self._tab_labels: dict[str, list[arcade.Text]] = {}  # name → [active_text, inactive_text]
 
-        # Close button (top-right corner of panel)
-        self._close_btn:  arcade.Sprite | None = None
-        self._close_label: arcade.Text  | None = None
-        self._close_rect: tuple[float, float, float, float] = (0, 0, 0, 0)  # x1,y1,x2,y2
+        # Profile tab render data
+        self._texts:     list[arcade.Text] = []
+        self._bar_rects: list[tuple]       = []  # (x1, x2, y1, y2, color)
+        self._lines:     list[tuple]       = []  # (x1, y1, x2, y2, color)
+
+        # Relationships tab render data
+        self._rel_texts:     list[arcade.Text] = []
+        self._rel_bar_rects: list[tuple]       = []
+        self._rel_lines:     list[tuple]       = []
+
+        # Close button
+        self._close_btn:   arcade.Sprite | None = None
+        self._close_label: arcade.Text   | None = None
+        self._close_rect: tuple[float, float, float, float] = (0, 0, 0, 0)
 
     def on_show_view(self) -> None:
         w, h = self.window.width, self.window.height
@@ -110,17 +138,19 @@ class ProfileView(arcade.View):
         self._panel_left   = (w - _PANEL_W) // 2
         self._panel_bottom = (h - _PANEL_H) // 2
 
+        il = self._panel_left   + _BORDER
+        it = self._panel_bottom + _PANEL_H - _BORDER
+
         self._panel_sprite = arcade.Sprite(self._panel_tex)
         self._panel_sprite.center_x = self._panel_left   + _PANEL_W // 2
         self._panel_sprite.center_y = self._panel_bottom + _PANEL_H // 2
 
+        # Portrait — shifted down by tab strip height
         self._portrait_sprite = arcade.Sprite(self._portrait_tex, scale=1.5)
-        il = self._panel_left   + _BORDER
-        it = self._panel_bottom + _PANEL_H - _BORDER
         self._portrait_sprite.center_x = il + _COL1_W // 2
-        self._portrait_sprite.center_y = it - 72
+        self._portrait_sprite.center_y = it - _TAB_H - 72
 
-        # Close button — top-right corner, inset by half a tile
+        # Close button — top-right corner
         btn_cx = self._panel_left + _PANEL_W - 20
         btn_cy = self._panel_bottom + _PANEL_H - 20
         self._close_btn = arcade.Sprite(
@@ -137,10 +167,29 @@ class ProfileView(arcade.View):
             anchor_x="center", anchor_y="center",
         )
 
-        self._texts.clear()
-        self._bar_rects.clear()
-        self._lines.clear()
-        self._build_all_content()
+        # Build tab click regions and pre-built label Text objects
+        tab_y_center = it - _TAB_H // 2
+        tab_w = 110
+        tab_x = il
+        display = {"profile": "Profile", "relationships": "Relationships"}
+        for name in ("profile", "relationships"):
+            self._tab_rects[name] = (tab_x, tab_y_center - 10, tab_x + tab_w, tab_y_center + 10)
+            cx = tab_x + tab_w // 2
+            self._tab_labels[name] = [
+                arcade.Text(display[name], cx, tab_y_center,  # active: dark + bold
+                            color=_HEADER_COLOR, font_size=8, bold=True,
+                            anchor_x="center", anchor_y="center"),
+                arcade.Text(display[name], cx, tab_y_center,  # inactive: dim
+                            color=_TAB_INACTIVE, font_size=8, bold=False,
+                            anchor_x="center", anchor_y="center"),
+            ]
+            tab_x += tab_w + 8
+
+        # Build content
+        self._texts.clear();     self._bar_rects.clear();     self._lines.clear()
+        self._rel_texts.clear(); self._rel_bar_rects.clear(); self._rel_lines.clear()
+        self._build_profile_tab(il, it)
+        self._build_relationships_tab(il, it)
 
     def on_draw(self) -> None:
         self._return_view.on_draw()
@@ -150,43 +199,69 @@ class ProfileView(arcade.View):
             )
             if self._panel_sprite:
                 arcade.draw_sprite(self._panel_sprite)
-            if self._portrait_sprite:
-                arcade.draw_sprite(self._portrait_sprite)
-            for x1, x2, y1, y2, color in self._bar_rects:
-                arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)
-            for x1, y1, x2, y2, color in self._lines:
-                arcade.draw_line(x1, y1, x2, y2, color, 1)
-            for t in self._texts:
-                t.draw()
+
+            # Tab strip
+            self._draw_tabs()
+
+            if self._active_tab == "profile":
+                if self._portrait_sprite:
+                    arcade.draw_sprite(self._portrait_sprite)
+                for x1, x2, y1, y2, color in self._bar_rects:
+                    arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)
+                for x1, y1, x2, y2, color in self._lines:
+                    arcade.draw_line(x1, y1, x2, y2, color, 1)
+                for t in self._texts:
+                    t.draw()
+            else:
+                for x1, x2, y1, y2, color in self._rel_bar_rects:
+                    arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)
+                for x1, y1, x2, y2, color in self._rel_lines:
+                    arcade.draw_line(x1, y1, x2, y2, color, 1)
+                for t in self._rel_texts:
+                    t.draw()
+
             if self._close_btn:
                 arcade.draw_sprite(self._close_btn)
             if self._close_label:
                 self._close_label.draw()
+
+    def _draw_tabs(self) -> None:
+        for name, (x1, y1, x2, y2) in self._tab_rects.items():
+            if name == self._active_tab:
+                arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, _TAB_ACTIVE_BG)
+            idx = 0 if name == self._active_tab else 1
+            self._tab_labels[name][idx].draw()
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol == arcade.key.ESCAPE:
             self.window.show_view(self._return_view)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        # Close button
         x1, y1, x2, y2 = self._close_rect
         if x1 <= x <= x2 and y1 <= y <= y2:
             self.window.show_view(self._return_view)
+            return
+        # Tab clicks
+        for name, (tx1, ty1, tx2, ty2) in self._tab_rects.items():
+            if tx1 <= x <= tx2 and ty1 <= y <= ty2:
+                self._active_tab = name
+                return
 
     # ------------------------------------------------------------------
-    # Build phase — called once in on_show_view
+    # Profile tab build
     # ------------------------------------------------------------------
 
-    def _build_all_content(self) -> None:
-        il = self._panel_left   + _BORDER
-        it = self._panel_bottom + _PANEL_H - _BORDER
+    def _build_profile_tab(self, il: float, it: float) -> None:
         ib = self._panel_bottom + _BORDER
+        ct = it - _TAB_H  # content top, below tab strip
 
-        self._build_identity(il, it)
-        self._build_traits(il, it - 144 - 14 - 5 * 16 - 20)
-        self._build_needs(il + _COL2_X, it)
-        self._build_skills(il + _COL2_X, it - 22 - 6 * _BAR_SPACING - 20)
-        self._build_grades(il + _COL3_X, it)
-        self._build_personality(il + _COL3_X, it - 22 - 6 * 18 - 16)
+        self._build_identity(il, ct)
+        self._build_traits(il, ct - 144 - 14 - 5 * 16 - 20)
+        self._build_needs(il + _COL2_X, ct)
+        self._build_skills(il + _COL2_X, ct - 22 - 6 * _BAR_SPACING - 20)
+        self._build_grades(il + _COL3_X, ct)
+        self._build_personality(il + _COL3_X, ct - 22 - 6 * 18 - 16)
         self._build_journal_and_thoughts(il, ib)
 
     def _build_identity(self, il: float, it: float) -> None:
@@ -279,13 +354,12 @@ class ProfileView(arcade.View):
     def _build_journal_and_thoughts(self, il: float, ib: float) -> None:
         s = self._student
 
-        # Thoughts — bottom of col 1
         thoughts_top = ib + 110
         self._section_header(il, thoughts_top, "THOUGHTS")
         y = thoughts_top - 20
         shown = 0
         for thought in reversed(s.thoughts):
-            if shown >= 4:
+            if shown >= 6:
                 break
             sign = "+" if thought.mood_effect >= 0 else ""
             self._add_text(f"{sign}{thought.mood_effect:.0f}  {thought.label}",
@@ -296,7 +370,6 @@ class ProfileView(arcade.View):
             self._add_text("Nothing on their mind.", il, y, _DIM_COLOR,
                            font_size=8, anchor_y="center")
 
-        # Journal — bottom strip, col 2+3
         jx = il + _COL2_X
         journal_top = ib + 110
         self._section_header(jx, journal_top, "JOURNAL")
@@ -313,17 +386,128 @@ class ProfileView(arcade.View):
                            font_size=8, anchor_y="center")
 
     # ------------------------------------------------------------------
-    # Build helpers
+    # Relationships tab build
+    # ------------------------------------------------------------------
+
+    def _build_relationships_tab(self, il: float, it: float) -> None:
+        s   = self._student
+        ct  = it - _TAB_H - 8  # content top, a little padding below tab strip
+        ib  = self._panel_bottom + _BORDER
+        sid = s.student_id
+
+        # Column layout (full inner width)
+        inner_w = _COL1_W + 20 + _COL2_W + 20 + _COL3_W  # ~590
+        col_name   = il
+        col_friend = il + 145
+        col_rom_me = il + 330   # my feelings → them
+        col_rom_them = il + 460 # their feelings → me
+        col_status = il + 590   # mutual status label
+
+        # Section header
+        self._rel_section_header(il, ct, "RELATIONSHIPS")
+        y = ct - 22
+
+        # Column headers
+        for text, x in (
+            ("NAME",        col_name),
+            ("FRIENDSHIP",  col_friend),
+            ("MY FEELINGS", col_rom_me),
+            ("THEIR FEELINGS", col_rom_them),
+            ("STATUS",      col_status),
+        ):
+            self._add_rel_text(text, x, y, _DIM_COLOR, font_size=7, bold=True)
+        y -= 4
+        # Header underline
+        self._rel_lines.append((il, y, il + inner_w, y, (140, 120, 90, 140)))
+        y -= 12
+
+        # Build sorted student list: dating first, then crush, then by friendship level desc
+        others = [st for st in self._state.students if st.student_id != sid]
+
+        def _sort_key(other: Student) -> tuple:
+            key = (min(sid, other.student_id), max(sid, other.student_id))
+            rom = self._state.romances.get(key)
+            fri = self._state.friendships.get(key)
+            rom_score = 0
+            if rom:
+                if rom.is_dating:
+                    rom_score = 3
+                elif rom.is_mutual_crush:
+                    rom_score = 2
+                elif rom.is_unrequited:
+                    rom_score = 1
+            fri_level = fri.level if fri else FriendshipLevel.STRANGER
+            return (-rom_score, -int(fri_level), other.name)
+
+        others.sort(key=_sort_key)
+
+        row_h = 18
+        for other in others:
+            if y < ib + 8:
+                break
+            key = (min(sid, other.student_id), max(sid, other.student_id))
+            fri = self._state.friendships.get(key)
+            rom = self._state.romances.get(key)
+
+            fri_level   = fri.level   if fri else FriendshipLevel.STRANGER
+            fri_affinity = fri.affinity if fri else 0
+            fri_color   = _FRIENDSHIP_COLORS.get(fri_level, _DIM_COLOR)
+
+            # Name
+            self._add_rel_text(other.name, col_name, y, _LABEL_COLOR, font_size=9)
+
+            # Friendship level + mini affinity bar
+            fri_label = fri_level.name.replace("_", " ").title()
+            self._add_rel_text(fri_label, col_friend, y, fri_color, font_size=8)
+            bar_x = col_friend + 90
+            bar_w = 50
+            self._rel_bar_rects.append((bar_x, bar_x + bar_w, y - 4, y + 4, _BAR_BG))
+            fill = int(bar_w * min(100, fri_affinity) / 100)
+            if fill > 0:
+                self._rel_bar_rects.append((bar_x, bar_x + fill, y - 4, y + 4, fri_color))
+
+            # Romance columns
+            if rom:
+                my_feelings   = rom.feelings_of(sid)
+                their_feelings = rom.feelings_of(other.student_id)
+
+                my_color   = _ROMANCE_COLORS.get(my_feelings, _DIM_COLOR)
+                their_color = _ROMANCE_COLORS.get(their_feelings, _DIM_COLOR)
+
+                if my_feelings != RomanceLevel.PLATONIC:
+                    self._add_rel_text(
+                        my_feelings.name.title(), col_rom_me, y, my_color, font_size=8
+                    )
+                if their_feelings != RomanceLevel.PLATONIC:
+                    self._add_rel_text(
+                        their_feelings.name.title(), col_rom_them, y, their_color, font_size=8
+                    )
+
+                # Status label
+                if rom.is_dating:
+                    self._add_rel_text("Dating!", col_status, y, (210, 50, 90, 255), font_size=8, bold=True)
+                elif rom.is_mutual_crush:
+                    self._add_rel_text("Mutual crush", col_status, y, (220, 100, 140, 255), font_size=8)
+                elif rom.is_unrequited:
+                    crusher_id = sid if my_feelings > RomanceLevel.PLATONIC else other.student_id
+                    label = "I like them" if crusher_id == sid else "They like me"
+                    self._add_rel_text(label, col_status, y, (180, 120, 140, 200), font_size=8)
+
+            y -= row_h
+
+        if not others:
+            self._add_rel_text("No other students.", il, y, _DIM_COLOR, font_size=8)
+
+    # ------------------------------------------------------------------
+    # Build helpers (profile tab)
     # ------------------------------------------------------------------
 
     def _add_text(self, text: str, x: float, y: float, color: tuple,
                   font_size: int = 9, bold: bool = False,
                   anchor_x: str = "left", anchor_y: str = "baseline",
                   width: int = 0, multiline: bool = False) -> None:
-        kwargs: dict = dict(
-            color=color, font_size=font_size, bold=bold,
-            anchor_x=anchor_x, anchor_y=anchor_y,
-        )
+        kwargs: dict = dict(color=color, font_size=font_size, bold=bold,
+                            anchor_x=anchor_x, anchor_y=anchor_y)
         if multiline and width:
             kwargs["width"] = width
             kwargs["multiline"] = True
@@ -337,15 +521,27 @@ class ProfileView(arcade.View):
         LABEL_W = 82
         GAP     = 5
         bar_x   = x + LABEL_W + GAP
-
         self._add_text(label, bar_x - GAP, y, _DIM_COLOR, font_size=8,
                        anchor_x="right", anchor_y="center")
-        # Background track
         self._bar_rects.append((bar_x, bar_x + _BAR_W, y - _BAR_H // 2, y + _BAR_H // 2, _BAR_BG))
-        # Fill
         fill = int(_BAR_W * max(0.0, min(100.0, value)) / 100.0)
         if fill > 0:
             self._bar_rects.append((bar_x, bar_x + fill, y - _BAR_H // 2, y + _BAR_H // 2, color))
-        # Value
         self._add_text(f"{int(value)}", bar_x + _BAR_W + GAP + 2, y, _DIM_COLOR,
                        font_size=8, anchor_y="center")
+
+    # ------------------------------------------------------------------
+    # Build helpers (relationships tab)
+    # ------------------------------------------------------------------
+
+    def _add_rel_text(self, text: str, x: float, y: float, color: tuple,
+                      font_size: int = 9, bold: bool = False) -> None:
+        self._rel_texts.append(arcade.Text(
+            text, x, y, color=color, font_size=font_size, bold=bold,
+            anchor_y="center",
+        ))
+
+    def _rel_section_header(self, x: float, y: float, text: str) -> None:
+        self._add_rel_text(text, x, y, _HEADER_COLOR, font_size=9, bold=True)
+        inner_w = _COL1_W + 20 + _COL2_W + 20 + _COL3_W
+        self._rel_lines.append((x, y - 13, x + inner_w, y - 13, (140, 120, 90, 180)))
