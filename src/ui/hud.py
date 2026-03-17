@@ -128,7 +128,7 @@ def _wrap(text: str, max_chars: int = _LOG_WRAP_CHARS) -> list[str]:
 class HUD:
     """Heads-up display drawn on top of the game view."""
 
-    MAX_MESSAGES = 12
+    MAX_MESSAGES = 200
 
     def __init__(self, screen_width: int, screen_height: int) -> None:
         # Each entry is a list of wrapped lines for one message.
@@ -234,7 +234,7 @@ class HUD:
             # Top bar + clock
             self._top_bar_list.draw()
             clock_str = (
-                f"Day {state.clock.day}  |  {state.clock.time_str}  |  "
+                f"{state.clock.day_time_str}  |  "
                 f"Points: {state.total_points}/{state.graduation_target}"
             )
             clock_tex = self._font.get_texture(clock_str)

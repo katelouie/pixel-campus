@@ -1,7 +1,7 @@
 {
   "name": "High School",
   "description": "Four years of drama, classes, and growing up.",
-  "num_students": 20,
+  "num_students": 10,
   "graduation_target": 800,
   "ticks_per_day": 48,
   "lunch_start_tick": 24,

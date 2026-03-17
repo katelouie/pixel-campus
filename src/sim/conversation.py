@@ -14,6 +14,7 @@ from enum import Enum
 from .models import Friendship, FriendshipLevel, Skill, Student
 from .needs import NeedType, satisfy_need
 from .personality import Worldview
+from .social import FRIENDSHIP_LEVEL_THRESHOLDS
 from .thoughts import (
     add_thought,
     thought_disagreed_with,
@@ -22,14 +23,6 @@ from .thoughts import (
     thought_best_friend,
     thought_good_conversation,
 )
-
-FRIENDSHIP_LEVEL_THRESHOLDS: dict[FriendshipLevel, int] = {
-    FriendshipLevel.STRANGER: 0,
-    FriendshipLevel.ACQUAINTANCE: 15,
-    FriendshipLevel.FRIEND: 35,
-    FriendshipLevel.CLOSE_FRIEND: 55,
-    FriendshipLevel.BEST_FRIEND: 75,
-}
 
 
 # ------------------------------------------------------------------
@@ -251,6 +244,14 @@ def resolve_conversation(
         rel.level = FriendshipLevel.ACQUAINTANCE
 
     outcome = evaluate_topic(a, b, topic)
+
+    # Mood snapping: a student having a bad day might snap even at a neutral interaction.
+    # This makes bad days feel real and creates emergent conflict without scripting.
+    for student in (a, b):
+        if student.mood_value < 25 and outcome == ConversationOutcome.NEUTRAL:
+            if random.random() < 0.3:
+                outcome = ConversationOutcome.CONFLICT
+                break
 
     # Affinity gain
     gain = {

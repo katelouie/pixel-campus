@@ -447,14 +447,15 @@ class GameState:
             student.activity_ticks_left = 0
             student.chat_partner_id = None
 
-            # Overnight recovery (amounts from scenario config)
+            # Overnight recovery (amounts from scenario config, respects trait satisfaction multipliers)
             sc = self.scenario
-            satisfy_need(student.needs, NeedType.REST, random.uniform(*sc.rest_recovery))
-            satisfy_need(student.needs, NeedType.FUN, random.uniform(*sc.fun_recovery))
-            satisfy_need(student.needs, NeedType.SOCIAL, random.uniform(*sc.social_recovery))
-            satisfy_need(student.needs, NeedType.ACADEMICS, random.uniform(*sc.minor_recovery))
-            satisfy_need(student.needs, NeedType.CREATIVITY, random.uniform(*sc.minor_recovery))
-            satisfy_need(student.needs, NeedType.ATHLETICS, random.uniform(*sc.minor_recovery))
+            tr = student.traits
+            satisfy_need(student.needs, NeedType.REST, random.uniform(*sc.rest_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.FUN, random.uniform(*sc.fun_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.SOCIAL, random.uniform(*sc.social_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.ACADEMICS, random.uniform(*sc.minor_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.CREATIVITY, random.uniform(*sc.minor_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.ATHLETICS, random.uniform(*sc.minor_recovery), traits=tr)
 
         # Move to next day
         self._lunch_dispatched = False

@@ -90,6 +90,7 @@ SKILL_TO_ACTIVITY: dict[Skill, StudentState] = {
     Skill.ACADEMICS: StudentState.STUDYING,
     Skill.ATHLETICS: StudentState.EXERCISING,
     Skill.CREATIVITY: StudentState.CREATING,
+    Skill.MUSIC: StudentState.CREATING,
     Skill.SOCIAL: StudentState.SOCIALIZING,
 }
 
@@ -213,19 +214,27 @@ class Student:
 
     @property
     def favorite_skill(self) -> Skill:
-        """Skill with the highest combined trait multiplier."""
+        """Skill with the highest combined trait multiplier.
+
+        For traitless students, deterministically seeded from student_id so the
+        result is stable across multiple calls in the same tick.
+        """
         core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
         if self.traits:
             return max(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
-        return random.choice(core_skills)
+        return random.Random(self.student_id).choice(core_skills)
 
     @property
     def dreaded_skill(self) -> Skill:
-        """Skill with the lowest combined trait multiplier."""
+        """Skill with the lowest combined trait multiplier.
+
+        For traitless students, deterministically seeded from student_id + 1 to
+        ensure favorite and dreaded don't always return the same skill.
+        """
         core_skills = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
         if self.traits:
             return min(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
-        return random.choice(core_skills)
+        return random.Random(self.student_id + 1).choice(core_skills)
 
     @property
     def is_busy(self) -> bool:

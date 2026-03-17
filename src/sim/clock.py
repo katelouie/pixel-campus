@@ -35,6 +35,13 @@ class GameClock:
         """Current minute within the hour."""
         return self.minutes_elapsed % 60
 
+    _WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Tue")  # loops through a school week
+
+    @property
+    def weekday_str(self) -> str:
+        """Named weekday: Mon, Tue, Wed, Thu, Fri (cycles weekly)."""
+        return self._WEEKDAYS[(self.day - 1) % 5]
+
     @property
     def time_str(self) -> str:
         """Human-readable time like '2:30 PM'."""
@@ -46,6 +53,17 @@ class GameClock:
             display_h = 12
 
         return f"{display_h}:{m:02d} {period}"
+
+    @property
+    def day_time_str(self) -> str:
+        """Combined display like 'Mon 9:35a' for the HUD banner."""
+        h = self.hour
+        m = self.minute
+        period = "a" if h < 12 else "p"
+        display_h = h % 12
+        if display_h == 0:
+            display_h = 12
+        return f"{self.weekday_str} {display_h}:{m:02d}{period}"
 
     @property
     def is_day_over(self) -> bool:

@@ -158,9 +158,12 @@ def _process_activity(student: Student) -> list[str]:
         student.state = StudentState.IDLE
         return log
 
-    # Apply skill growth (modified by traits)
+    # Apply skill growth (modified by traits and current mood)
+    # Mood multiplier: 0.5x at mood 0, 1.0x at mood 50, 1.5x at mood 100.
+    # Creates the core cascade: bad mood → slower growth → worse grades → worse thoughts → worse mood.
     trait_skill_mult = combined_skill_mult(student.traits, room.skill_boost.value)
-    skill_gain = room.boost_per_tick * trait_skill_mult
+    mood_mult = 0.5 + (student.mood_value / 100.0)
+    skill_gain = room.boost_per_tick * trait_skill_mult * mood_mult
     old_skill = student.skills.get(room.skill_boost, 0.0)
     student.skills[room.skill_boost] = old_skill + skill_gain
     new_skill = student.skills[room.skill_boost]
