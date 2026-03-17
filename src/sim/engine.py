@@ -15,7 +15,7 @@ from .academics import (
     create_default_grades,
     tick_all_grades,
 )
-from .behaviors import process_student, send_to_room
+from .behaviors import _autonomous_decision, process_student, send_to_room
 from .clock import TICKS_PER_DAY, GameClock
 from .defs import GameDefs, ScenarioConfig
 from .events import SchoolEvent, check_for_event, resolve_event
@@ -41,6 +41,7 @@ from .thoughts import (
     thought_failing_subject,
     thought_grades_improving,
     thought_great_report_card,
+    thought_lunch_social,
     thought_slept_well,
 )
 
@@ -67,6 +68,14 @@ class GameState:
 
     # Messages generated this tick
     tick_log: list[str] = field(default_factory=list)
+
+    # Lunch tracking — reset each new day
+    _lunch_dispatched: bool = False
+
+    @property
+    def is_lunch_period(self) -> bool:
+        """True during the scheduled lunch window."""
+        return self.scenario.lunch_start_tick <= self.clock.tick < self.scenario.lunch_end_tick
 
     @classmethod
     def new_game(
@@ -230,6 +239,14 @@ class GameState:
             # Tick grades (drift + decay)
             tick_all_grades(student.grades)
 
+        # Lunch bell — dispatch everyone to cafeteria once at the start of lunch
+        if self.clock.tick == self.scenario.lunch_start_tick and not self._lunch_dispatched:
+            self.tick_log.extend(self._start_lunch_period())
+
+        # Post-lunch bell — nudge all idle students to find their next activity
+        if self.clock.tick == self.scenario.lunch_end_tick:
+            self.tick_log.extend(self._end_lunch_period())
+
         # Check for spontaneous social interactions
         self._process_social_encounters()
 
@@ -294,6 +311,31 @@ class GameState:
     # ------
     # SOCIAL
     # ------
+
+    def _start_lunch_period(self) -> list[str]:
+        """Send every student to the cafeteria for lunch."""
+        self._lunch_dispatched = True
+        cafeteria = self.get_room_by_name("Cafeteria")
+        if cafeteria is None:
+            return []
+        log: list[str] = ["** Lunch bell! Everyone heads to the Cafeteria. **"]
+        for student in self.students:
+            if student.location != cafeteria:
+                send_to_room(student, cafeteria)
+        return log
+
+    def _end_lunch_period(self) -> list[str]:
+        """Force idle students out of the cafeteria to their next activity."""
+        cafeteria = self.get_room_by_name("Cafeteria")
+        nudged = 0
+        for student in self.students:
+            if student.state in (StudentState.IDLE, StudentState.SOCIALIZING):
+                # Give a small mood boost to students who made it to lunch
+                if student.location == cafeteria and random.random() < 0.7:
+                    add_thought(student.thoughts, thought_lunch_social())
+                _autonomous_decision(student, self)
+                nudged += 1
+        return [f"** Lunch over! {nudged} students head back to their afternoon. **"] if nudged else []
 
     def _process_social_encounters(self) -> None:
         """Students in the same room who are idle or doing activities might chat."""
@@ -370,7 +412,7 @@ class GameState:
 
         # Journal entries
         for student in self.students:
-            if random.random() < 0.4:
+            if random.random() < 0.6:
                 entry = generate_journal_entry(student, self.clock.day)
                 student.journal.append((self.clock.day, entry))
                 log.append(f"{student.name} wrote in their journal")
@@ -402,6 +444,7 @@ class GameState:
             satisfy_need(student.needs, NeedType.ATHLETICS, random.uniform(*sc.minor_recovery))
 
         # Move to next day
+        self._lunch_dispatched = False
         self.clock.new_day()
 
         # Students start at the spawn point (no room yet) so all dispatches fire properly

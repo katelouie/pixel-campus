@@ -7,7 +7,7 @@ Run from the project root:
 from pathlib import Path
 
 import arcade
-from pyglet import gl
+from pyglet import gl, image as pyglet_image
 
 from src.sim.engine import GameState
 from src.ui.sprites import load_premade_character_textures
@@ -20,6 +20,9 @@ SCREEN_TITLE: str = "Pixel Campus"
 
 # Asset paths (resolved relative to project root, not CWD)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_ICON_PATH = str(
+    _PROJECT_ROOT / "assets/packs/Icons_Essential/v1.2/Icons/Book.png"
+)
 CHAR_BASE = str(
     _PROJECT_ROOT
     / "assets" / "packs" / "moderninteriors-win"
@@ -37,6 +40,9 @@ class PixelCampusWindow(arcade.Window):
 
         # Pixel-art rendering -- MUST be set before any sprite creation
         arcade.SpriteList.DEFAULT_TEXTURE_FILTER = gl.GL_NEAREST, gl.GL_NEAREST
+
+        # Window icon
+        self.set_icon(pyglet_image.load(_ICON_PATH))
 
         # Create the simulation
         self.state = GameState.new_game(num_students=20)

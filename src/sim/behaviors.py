@@ -13,9 +13,12 @@ from .models import SKILL_TO_ACTIVITY, Room, Skill, Student, StudentState
 from .needs import NeedType, satisfy_need, tick_needs
 from .thoughts import (
     add_thought,
+    thought_academic_pressure,
     thought_activity_dreaded,
     thought_activity_favorite,
+    thought_lonely,
     thought_running_on_fumes,
+    thought_skill_milestone,
     thought_so_bored,
     tick_thoughts,
 )
@@ -104,6 +107,10 @@ def process_student(student: Student, state: "GameState") -> list[str]:
         add_thought(student.thoughts, thought_running_on_fumes())
     if student.needs[NeedType.FUN].value < 15:
         add_thought(student.thoughts, thought_so_bored())
+    if student.needs[NeedType.SOCIAL].value < 20:
+        add_thought(student.thoughts, thought_lonely())
+    if student.needs[NeedType.ACADEMICS].value < 15:
+        add_thought(student.thoughts, thought_academic_pressure())
 
     return log
 
@@ -121,8 +128,8 @@ def _process_idle(student: Student, state: "GameState") -> list[str]:
     satisfy_need(student.needs, NeedType.REST, 1.0)
     satisfy_need(student.needs, NeedType.FUN, 0.3)
 
-    # Autonomous decision-making
-    if random.random() < 0.06:
+    # Autonomous decision-making (suppressed during lunch — cafeteria dispatch handles it)
+    if not state.is_lunch_period and random.random() < 0.06:
         log.extend(_autonomous_decision(student, state))
 
     return log
@@ -154,7 +161,12 @@ def _process_activity(student: Student) -> list[str]:
     # Apply skill growth (modified by traits)
     trait_skill_mult = combined_skill_mult(student.traits, room.skill_boost.value)
     skill_gain = room.boost_per_tick * trait_skill_mult
-    student.skills[room.skill_boost] += skill_gain
+    old_skill = student.skills.get(room.skill_boost, 0.0)
+    student.skills[room.skill_boost] = old_skill + skill_gain
+    new_skill = student.skills[room.skill_boost]
+    for threshold in (25, 50, 75, 100):
+        if old_skill < threshold <= new_skill:
+            add_thought(student.thoughts, thought_skill_milestone(room.skill_boost.value, threshold))
 
     # Apply need satisfaction from this room (traits modify satisfaction amounts)
     for need_key, amount in room.needs_satisfied.items():

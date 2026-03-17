@@ -66,11 +66,9 @@ class Weather(Enum):
 
 
 class RomanceInterest(Enum):
-    EVERYONE  = "everyone"
-    BOYS      = "boys"
-    GIRLS     = "girls"
+    BOYS       = "boys"
+    GIRLS      = "girls"
     NON_BINARY = "non_binary"
-    NOBODY    = "nobody"
 
 
 class Worldview(Enum):
@@ -80,6 +78,24 @@ class Worldview(Enum):
     MODERATE    = "moderate"
     TRADITIONAL = "traditional"
     APOLITICAL  = "apolitical"
+
+
+def _random_romance_interests() -> list[RomanceInterest]:
+    """Generate a random romance interest list. ~10% nobody, rest 1-3 genders."""
+    if random.random() < 0.10:
+        return []
+    all_ri = list(RomanceInterest)
+    k = random.choices([1, 2, 3], weights=[65, 28, 7])[0]
+    return random.sample(all_ri, k=k)
+
+
+def fmt_romance_interests(interests: list[RomanceInterest]) -> str:
+    """Human-readable romance interest string for display."""
+    if not interests:
+        return "Nobody"
+    if len(interests) == len(RomanceInterest):
+        return "Everyone"
+    return ", ".join(i.value.replace("_", " ").title() for i in interests)
 
 
 # Signs whose peak birth month falls before the Sep 1 school-year cutoff.
@@ -109,7 +125,7 @@ class Personality:
     movie_genre:      MovieGenre
     time_of_day:      TimeOfDay
     weather:          Weather
-    romance_interest: RomanceInterest
+    romance_interest: list[RomanceInterest]
     worldview:        Worldview
 
     def age_offset(self) -> int:
@@ -138,6 +154,6 @@ class Personality:
             movie_genre=random.choice(list(MovieGenre)),
             time_of_day=random.choice(list(TimeOfDay)),
             weather=random.choice(list(Weather)),
-            romance_interest=random.choice(list(RomanceInterest)),
+            romance_interest=_random_romance_interests(),
             worldview=random.choice(list(Worldview)),
         )

@@ -75,7 +75,9 @@ class ScenarioConfig:
     description: str = ""
     num_students: int = 8
     graduation_target: int = 800
-    ticks_per_day: int = 84
+    ticks_per_day: int = 48
+    lunch_start_tick: int = 24   # 12:00 PM (4 hours after 8 AM)
+    lunch_end_tick: int = 29     # 12:50 PM
     report_card_interval: int = 7
     starting_room: str = "Cafeteria"
     student_names: list[str] = field(default_factory=list)
@@ -104,7 +106,9 @@ def _load_scenario(path: Path) -> ScenarioConfig:
         description=data.get("description", ""),
         num_students=data.get("num_students", 8),
         graduation_target=data.get("graduation_target", 800),
-        ticks_per_day=data.get("ticks_per_day", 84),
+        ticks_per_day=data.get("ticks_per_day", 48),
+        lunch_start_tick=data.get("lunch_start_tick", 24),
+        lunch_end_tick=data.get("lunch_end_tick", 29),
         report_card_interval=data.get("report_card_interval", 7),
         starting_room=data.get("starting_room", "Cafeteria"),
         student_names=data.get("student_names", []),

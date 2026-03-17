@@ -634,8 +634,15 @@ class CampusView(arcade.View):
     # Input
     # ------------------------------------------------------------------
 
+    def on_show_view(self) -> None:
+        """Clear held camera keys so nothing is stuck after returning from another view."""
+        self._camera_keys.clear()
+
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         self._camera_keys.add(symbol)
+        if symbol == arcade.key.ESCAPE:
+            self._selected_sprite = None
+            return
         if symbol == arcade.key.SPACE:
             logs = self._state.tick()
             self._hud.push_messages(logs)
@@ -698,9 +705,10 @@ class CampusView(arcade.View):
                     self,
                 ))
                 return
-        # Convert screen → world coordinates
-        world_x = x + self._camera.position[0] - self.window.width / 2
-        world_y = y + self._camera.position[1] - self.window.height / 2
+        # Convert screen → world coordinates (account for zoom)
+        zoom = self._camera.zoom
+        world_x = (x - self.window.width  / 2) / zoom + self._camera.position[0]
+        world_y = (y - self.window.height / 2) / zoom + self._camera.position[1]
         clicked = arcade.get_sprites_at_point((world_x, world_y), self._sprite_list)
         if clicked:
             self._selected_sprite = clicked[0]

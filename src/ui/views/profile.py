@@ -7,13 +7,23 @@ All text is built into arcade.Text objects once in on_show_view so that
 on_draw never calls the slow arcade.draw_text() path.
 """
 
+from pathlib import Path
+
 import arcade
 
 from src.sim.academics import Subject
 from src.sim.engine import GameState
 from src.sim.models import Skill, Student
 from src.sim.needs import NeedType
+from src.sim.personality import fmt_romance_interests
 from src.ui.hud import _make_nine_slice_texture
+
+_PAPERNOTE = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / "assets/packs/Complete_UI_Essential_Pack_v2.4/11_Papernote_Theme/Sprites"
+)
+_CLOSE_BTN_PATH = str(_PAPERNOTE / "UI_Papernote_Button01.png")
+_CLOSE_BTN_SIZE = 28   # render size (Button01 is 32px, scale down slightly)
 
 _PANEL_W = 1020
 _PANEL_H = 620
@@ -75,8 +85,9 @@ class ProfileView(arcade.View):
         self._portrait_tex = portrait_tex
         self._return_view  = return_view
 
-        self._panel_tex  = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
-        self._screen_cam = arcade.Camera2D()
+        self._panel_tex    = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
+        self._close_btn_tex = arcade.load_texture(_CLOSE_BTN_PATH)
+        self._screen_cam   = arcade.Camera2D()
 
         self._panel_sprite:    arcade.Sprite | None = None
         self._portrait_sprite: arcade.Sprite | None = None
@@ -87,7 +98,11 @@ class ProfileView(arcade.View):
         self._texts:    list[arcade.Text]  = []
         self._bar_rects: list[tuple]       = []  # (x1, x2, y1, y2, color)
         self._lines:     list[tuple]       = []  # (x1, y, x2, y, color)
-        self._esc_text:  arcade.Text | None = None
+
+        # Close button (top-right corner of panel)
+        self._close_btn:  arcade.Sprite | None = None
+        self._close_label: arcade.Text  | None = None
+        self._close_rect: tuple[float, float, float, float] = (0, 0, 0, 0)  # x1,y1,x2,y2
 
     def on_show_view(self) -> None:
         w, h = self.window.width, self.window.height
@@ -105,10 +120,21 @@ class ProfileView(arcade.View):
         self._portrait_sprite.center_x = il + _COL1_W // 2
         self._portrait_sprite.center_y = it - 72
 
-        self._esc_text = arcade.Text(
-            "ESC to close",
-            w // 2, self._panel_bottom + 10,
-            color=(100, 90, 80, 200), font_size=9, anchor_x="center",
+        # Close button — top-right corner, inset by half a tile
+        btn_cx = self._panel_left + _PANEL_W - 20
+        btn_cy = self._panel_bottom + _PANEL_H - 20
+        self._close_btn = arcade.Sprite(
+            self._close_btn_tex,
+            scale=_CLOSE_BTN_SIZE / self._close_btn_tex.width,
+        )
+        self._close_btn.center_x = btn_cx
+        self._close_btn.center_y = btn_cy
+        half = _CLOSE_BTN_SIZE // 2
+        self._close_rect = (btn_cx - half, btn_cy - half, btn_cx + half, btn_cy + half)
+        self._close_label = arcade.Text(
+            "✕", btn_cx, btn_cy,
+            color=(80, 40, 20, 230), font_size=11, bold=True,
+            anchor_x="center", anchor_y="center",
         )
 
         self._texts.clear()
@@ -132,11 +158,18 @@ class ProfileView(arcade.View):
                 arcade.draw_line(x1, y1, x2, y2, color, 1)
             for t in self._texts:
                 t.draw()
-            if self._esc_text:
-                self._esc_text.draw()
+            if self._close_btn:
+                arcade.draw_sprite(self._close_btn)
+            if self._close_label:
+                self._close_label.draw()
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol == arcade.key.ESCAPE:
+            self.window.show_view(self._return_view)
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        x1, y1, x2, y2 = self._close_rect
+        if x1 <= x <= x2 and y1 <= y <= y2:
             self.window.show_view(self._return_view)
 
     # ------------------------------------------------------------------
@@ -236,7 +269,7 @@ class ProfileView(arcade.View):
             ("Views",   _fmt(p.worldview.value)),
             ("Time",    _fmt(p.time_of_day.value)),
             ("Weather", _fmt(p.weather.value)),
-            ("Romance", _fmt(p.romance_interest.value)),
+            ("Romance", fmt_romance_interests(p.romance_interest)),
         ]
         for label, value in prefs:
             self._add_text(f"{label}:", x, y, _DIM_COLOR, font_size=8, anchor_y="center")

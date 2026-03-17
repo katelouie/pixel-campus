@@ -7,7 +7,7 @@ level up relationships
 import random
 from .models import Friendship, FriendshipLevel, Romance, RomanceLevel, Skill, Student
 from .personality import RomanceInterest
-from .thoughts import add_thought, thought_best_friend, thought_friendship_levelup
+from .thoughts import add_thought, thought_best_friend, thought_crush, thought_dating, thought_friendship_levelup
 
 FRIENDSHIP_LEVEL_THRESHOLDS: dict[FriendshipLevel, int] = {
     FriendshipLevel.STRANGER: 0,
@@ -152,20 +152,16 @@ def _romance_interest_compatible(a: Student, b: Student) -> bool:
     if a.personality is None or b.personality is None:
         return False
 
+    from .models import Gender
+    _GENDER_MAP = {
+        RomanceInterest.BOYS:       Gender.MALE,
+        RomanceInterest.GIRLS:      Gender.FEMALE,
+        RomanceInterest.NON_BINARY: Gender.NON_BINARY,
+    }
+
     def interested_in(student: Student, other: Student) -> bool:
-        ri = student.personality.romance_interest  # type: ignore[union-attr]
-        if ri == RomanceInterest.NOBODY:
-            return False
-        if ri == RomanceInterest.EVERYONE:
-            return True
-        from .models import Gender
-        if ri == RomanceInterest.BOYS and other.gender == Gender.MALE:
-            return True
-        if ri == RomanceInterest.GIRLS and other.gender == Gender.FEMALE:
-            return True
-        if ri == RomanceInterest.NON_BINARY and other.gender == Gender.NON_BINARY:
-            return True
-        return False
+        interests = student.personality.romance_interest  # type: ignore[union-attr]
+        return any(_GENDER_MAP[ri] == other.gender for ri in interests)
 
     return interested_in(a, b) and interested_in(b, a)
 
@@ -226,12 +222,15 @@ def maybe_romance(
                 rel.set_feelings(student.student_id, next_level)
                 if next_level == RomanceLevel.CRUSH:
                     logs.append(f"{student.name} has developed a crush on {other.name}.")
+                    add_thought(student.thoughts, thought_crush(other.name))
 
     # Dating: only happens when BOTH have reached CRUSH and compatibility is high
     if rel.is_mutual_crush and compat > 0.6 and random.random() < 0.1:
         rel.set_feelings(a.student_id, RomanceLevel.DATING)
         rel.set_feelings(b.student_id, RomanceLevel.DATING)
         logs.append(f"{a.name} and {b.name} are officially dating!")
+        add_thought(a.thoughts, thought_dating(b.name))
+        add_thought(b.thoughts, thought_dating(a.name))
 
     # Flavor text from templates
     if rel.is_dating:

@@ -224,6 +224,73 @@ def thought_so_bored() -> Thought:
     )
 
 
+def thought_lonely() -> Thought:
+    """SOCIAL need critically low."""
+    return Thought(
+        label="Feeling really lonely...",
+        mood_effect=-5.0,
+        duration_ticks=6,
+        ticks_remaining=6,
+        category="social",
+        source_id="critical_social",
+    )
+
+
+def thought_academic_pressure() -> Thought:
+    """ACADEMICS need critically low — feels behind."""
+    return Thought(
+        label="Falling behind on everything",
+        mood_effect=-4.0,
+        duration_ticks=6,
+        ticks_remaining=6,
+        category="academic",
+        source_id="critical_academics",
+    )
+
+
+def thought_skill_milestone(skill_name: str, level: int) -> Thought:
+    """Hit a skill milestone (25/50/75/100)."""
+    labels = {
+        25:  f"Getting the hang of {skill_name}!",
+        50:  f"Really improving at {skill_name}",
+        75:  f"Almost mastered {skill_name}!",
+        100: f"I'm amazing at {skill_name}!",
+    }
+    effects = {25: 4.0, 50: 6.0, 75: 8.0, 100: 12.0}
+    return Thought(
+        label=labels.get(level, f"{skill_name} milestone"),
+        mood_effect=effects.get(level, 5.0),
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="activity",
+        stackable=True,
+    )
+
+
+def thought_lunch_social() -> Thought:
+    """Had a good lunch with people around."""
+    return Thought(
+        label="Lunch was nice today",
+        mood_effect=2.0,
+        duration_ticks=18,
+        ticks_remaining=18,
+        category="social",
+        source_id="lunch_social",
+    )
+
+
+def thought_dating(partner_name: str) -> Thought:
+    """Started dating someone."""
+    return Thought(
+        label=f"I'm with {partner_name} now! 💕",
+        mood_effect=15.0,
+        duration_ticks=96,
+        ticks_remaining=96,
+        category="social",
+        source_id=f"dating_{partner_name}",
+    )
+
+
 def thought_good_conversation(friend_name: str) -> Thought:
     """Had a pleasant conversation with someone."""
     return Thought(
