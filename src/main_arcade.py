@@ -45,7 +45,7 @@ class PixelCampusWindow(arcade.Window):
         self.set_icon(pyglet_image.load(_ICON_PATH))
 
         # Create the simulation
-        self.state = GameState.new_game(num_students=20)
+        self.state = GameState.new_game()
 
         # Load character textures for all premade characters in use
         self.char_textures: dict[int, dict] = {
