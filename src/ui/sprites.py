@@ -185,12 +185,14 @@ class StudentSprite(arcade.Sprite):
         """Start walking directly to a position (no pathfinding — use set_path instead)."""
         self.is_sitting = False
         self.is_stationed = False
+        self._is_throwing = False
         self.path = []
         self.target_x = x
         self.target_y = y
         self.is_walking = True
         self.anim_timer = 0
         self.anim_frame = 0
+        self._anim_length = FRAMES_PER_DIRECTION
 
     def set_path(self, waypoints: list[tuple[float, float]]) -> None:
         """Walk along a sequence of waypoints (e.g. from A* pathfinding)."""
@@ -199,12 +201,14 @@ class StudentSprite(arcade.Sprite):
             return
         self.is_sitting = False
         self.is_stationed = False
+        self._is_throwing = False
         self.path = list(waypoints)
         first = self.path.pop(0)
         self.target_x, self.target_y = first
         self.is_walking = True
         self.anim_timer = 0
         self.anim_frame = 0
+        self._anim_length = FRAMES_PER_DIRECTION
 
     def stop(self) -> None:
         """Stop walking; idle animation will take over in update_movement."""

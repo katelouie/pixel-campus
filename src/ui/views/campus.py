@@ -301,6 +301,7 @@ class CampusView(arcade.View):
 
         # --- HUD ---
         self._hud = HUD(self.window.width, self.window.height)
+        self._hud.set_student_names({s.name for s in self._state.students})
         self._hud.push_messages(
             ["Welcome to Pixel Campus! SPACE: tick | P: auto-run | +/-: zoom | arrows: pan"]
         )
@@ -314,6 +315,66 @@ class CampusView(arcade.View):
         # Auto-run
         self._auto_run: bool = False
         self._auto_run_timer: float = 0.0
+
+        # --- Selection mini-card (bottom-right, screen-space) ---
+        from src.ui.hud import _make_nine_slice_texture, _make_banner_texture
+        _CARD_W, _CARD_H = 192, 284
+        _CARD_MARGIN = 8
+        _card_left   = self.window.width  - _CARD_W - _CARD_MARGIN
+        _card_bottom = _CARD_MARGIN
+
+        self._card_screen_cam = arcade.Camera2D()
+        self._card_screen_cam.position = arcade.Vec2(
+            self.window.width / 2, self.window.height / 2
+        )
+        card_panel_tex = _make_nine_slice_texture(_CARD_W, _CARD_H)
+        self._card_panel_sprite = arcade.Sprite(card_panel_tex)
+        self._card_panel_sprite.center_x = _card_left + _CARD_W // 2
+        self._card_panel_sprite.center_y = _card_bottom + _CARD_H // 2
+
+        # Portrait sprite — texture swapped on selection change
+        _empty_portrait = arcade.Texture(_PILImage.new("RGBA", (48, 96), (0, 0, 0, 0)))
+        self._card_portrait_sprite = arcade.Sprite(_empty_portrait, scale=1.5)
+        self._card_portrait_sprite.center_x = _card_left + _CARD_W // 2
+        # Portrait center: just inside top border, 72px from top inner edge (144/2)
+        self._card_portrait_sprite.center_y = _card_bottom + _CARD_H - 32 - 72
+
+        # "View Profile" button banner
+        _BTN_W = 128
+        _btn_left   = _card_left + (_CARD_W - _BTN_W) // 2
+        _btn_bottom = _card_bottom + 32       # sits just inside bottom border
+        _btn_top    = _btn_bottom + 32
+        btn_tex = _make_banner_texture(_BTN_W)
+        self._card_btn_sprite = arcade.Sprite(btn_tex)
+        self._card_btn_sprite.center_x = _btn_left + _BTN_W // 2
+        self._card_btn_sprite.center_y = (_btn_bottom + _btn_top) // 2
+        # Stored for click-hit testing (screen coords)
+        self._card_btn_bounds = (_btn_left, _btn_left + _BTN_W, _btn_bottom, _btn_top)
+
+        # Pre-built Text objects for the mini-card (text updated on selection change)
+        _portrait_bottom = self._card_portrait_sprite.center_y - 72  # 96*1.5/2
+        _cx = _card_left + _CARD_W // 2
+        self._card_name_text = arcade.Text(
+            "", _cx, _portrait_bottom - 16,
+            color=(40, 30, 20, 255), font_size=10, bold=True,
+            anchor_x="center", anchor_y="center",
+        )
+        self._card_mood_text = arcade.Text(
+            "", _cx, _portrait_bottom - 32,
+            color=(60, 50, 40, 255), font_size=9,
+            anchor_x="center", anchor_y="center",
+        )
+        self._card_state_text = arcade.Text(
+            "", _cx, _portrait_bottom - 48,
+            color=(80, 70, 55, 200), font_size=8,
+            anchor_x="center", anchor_y="center",
+        )
+        self._card_btn_text = arcade.Text(
+            "View Profile",
+            self._card_btn_sprite.center_x, self._card_btn_sprite.center_y,
+            color=(40, 30, 20, 255), font_size=8,
+            anchor_x="center", anchor_y="center",
+        )
 
     # ------------------------------------------------------------------
     # Setup helpers
@@ -541,6 +602,28 @@ class CampusView(arcade.View):
                     border_width=2,
                 )
         self._hud.draw(self._state)
+        if self._selected_sprite:
+            self._draw_selection_card()
+
+    def _draw_selection_card(self) -> None:
+        """Draw the bottom-right mini info card for the selected student."""
+        sprite  = self._selected_sprite
+        student = sprite.student
+
+        self._card_portrait_sprite.texture = sprite.idle_textures["down"]
+
+        self._card_name_text.text  = student.name
+        self._card_mood_text.text  = f"{student.mood.icon} {student.mood.name.capitalize()}"
+        self._card_state_text.text = student.state.value.capitalize()
+
+        with self._card_screen_cam.activate():
+            arcade.draw_sprite(self._card_panel_sprite)
+            arcade.draw_sprite(self._card_portrait_sprite)
+            arcade.draw_sprite(self._card_btn_sprite)
+            self._card_name_text.draw()
+            self._card_mood_text.draw()
+            self._card_state_text.draw()
+            self._card_btn_text.draw()
 
     def _draw_student_labels(self) -> None:
         for sid in self._student_sprites:
@@ -590,6 +673,31 @@ class CampusView(arcade.View):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         if button != arcade.MOUSE_BUTTON_LEFT:
             return
+        # Check log panel for clickable student names
+        from src.ui.hud import _PANEL_W, _PANEL_H
+        if x <= _PANEL_W and y <= _PANEL_H:
+            name = self._hud.check_name_click(x, y)
+            if name:
+                student = self._state.get_student_by_name(name)
+                if student:
+                    sprite = self._student_sprites.get(student.student_id)
+                    if sprite:
+                        self._camera.position = arcade.Vec2(sprite.center_x, sprite.center_y)
+                        self._hud.push_messages([f"Camera → {name}"])
+                return
+
+        # Check mini-card "View Profile" button first (screen-space, no transform needed)
+        if self._selected_sprite is not None:
+            bl, br, bb, bt = self._card_btn_bounds
+            if bl <= x <= br and bb <= y <= bt:
+                from src.ui.views.profile import ProfileView
+                self.window.show_view(ProfileView(
+                    self._state,
+                    self._selected_sprite.student,
+                    self._selected_sprite.idle_textures["down"],
+                    self,
+                ))
+                return
         # Convert screen → world coordinates
         world_x = x + self._camera.position[0] - self.window.width / 2
         world_y = y + self._camera.position[1] - self.window.height / 2

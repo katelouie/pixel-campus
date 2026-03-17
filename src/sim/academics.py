@@ -61,7 +61,7 @@ class Grade:
 
     @property
     def letter(self) -> str:
-        """Letter grade from effective value."""
+        """Base letter grade (no +/-). Used for report card points lookup."""
         v = self.effective
         if v >= 90:
             return "A"
@@ -71,6 +71,24 @@ class Grade:
             return "C"
         if v >= 60:
             return "D"
+        return "F"
+
+    @property
+    def letter_full(self) -> str:
+        """Letter grade with +/- modifier for display."""
+        v = self.effective
+        if v >= 97: return "A+"
+        if v >= 93: return "A"
+        if v >= 90: return "A-"
+        if v >= 87: return "B+"
+        if v >= 83: return "B"
+        if v >= 80: return "B-"
+        if v >= 77: return "C+"
+        if v >= 73: return "C"
+        if v >= 70: return "C-"
+        if v >= 67: return "D+"
+        if v >= 63: return "D"
+        if v >= 60: return "D-"
         return "F"
 
     @property

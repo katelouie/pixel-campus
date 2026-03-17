@@ -177,6 +177,10 @@ class HUD:
         # Scroll state: 0 = newest lines, positive = scrolled back into history
         self._scroll_offset: int = 0
 
+        # Clickable student name regions — rebuilt each draw()
+        self._student_names: set[str] = set()
+        self._name_regions: list[tuple[float, float, float, float, str]] = []
+
         # One sprite per log line — textures swapped each draw()
         _empty = arcade.Texture(_PILImage.new("RGBA", (1, self._font.char_height), (0, 0, 0, 0)))
         self._msg_sprites: list[arcade.Sprite] = []
@@ -185,6 +189,18 @@ class HUD:
             sprite = arcade.Sprite(_empty)
             self._msg_sprites.append(sprite)
             self._msg_sprite_list.append(sprite)
+
+    def set_student_names(self, names: set[str]) -> None:
+        """Tell the HUD which names to highlight as clickable in the log."""
+        self._student_names = names
+        self._name_regions: list[tuple[float, float, float, float, str]] = []
+
+    def check_name_click(self, x: int, y: int) -> str | None:
+        """Return a student name if (x, y) falls within a highlighted name region."""
+        for x1, x2, y1, y2, name in self._name_regions:
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return name
+        return None
 
     def push_messages(self, messages: list[str]) -> None:
         """Add new log messages (each word-wrapped into a group), keeping MAX_MESSAGES groups."""
@@ -241,6 +257,27 @@ class HUD:
                 sprite.center_x = self._inner_x + tex.width // 2
                 sprite.center_y = self._inner_top - i * line_spacing - tex.height // 2
             self._msg_sprite_list.draw()
+
+            # Highlight clickable student names — amber underline + click regions
+            self._name_regions = []
+            if self._student_names:
+                line_spacing = self._font.line_spacing
+                char_h = self._font.char_height
+                for i, text in enumerate(display_lines):
+                    line_top = self._inner_top - i * line_spacing
+                    line_bot = line_top - char_h
+                    for name in self._student_names:
+                        idx = text.find(name)
+                        while idx >= 0:
+                            x1 = self._inner_x + idx * _CHAR_STEP
+                            x2 = self._inner_x + (idx + len(name)) * _CHAR_STEP
+                            # Underline
+                            arcade.draw_line(
+                                x1, line_bot - 1, x2, line_bot - 1,
+                                (160, 120, 40, 220), 1,
+                            )
+                            self._name_regions.append((x1, x2, line_bot - 3, line_top + 2, name))
+                            idx = text.find(name, idx + len(name))
 
             # Scrollbar (only when there's more history than fits)
             max_scroll = self._max_scroll()
