@@ -222,3 +222,39 @@ def thought_so_bored() -> Thought:
         category="fun",
         source_id="critical_fun",
     )
+
+
+def thought_good_conversation(friend_name: str) -> Thought:
+    """Had a pleasant conversation with someone."""
+    return Thought(
+        label=f"Good chat with {friend_name}",
+        mood_effect=3.0,
+        duration_ticks=18,
+        ticks_remaining=18,
+        category="social",
+        stackable=True,
+    )
+
+
+def thought_found_common_ground(friend_name: str) -> Thought:
+    """Discovered shared worldview or deep common ground."""
+    return Thought(
+        label=f"Really clicked with {friend_name}",
+        mood_effect=6.0,
+        duration_ticks=42,
+        ticks_remaining=42,
+        category="social",
+        stackable=True,
+    )
+
+
+def thought_disagreed_with(friend_name: str) -> Thought:
+    """Had a conflicting conversation."""
+    return Thought(
+        label=f"Got into it with {friend_name}...",
+        mood_effect=-3.0,
+        duration_ticks=18,
+        ticks_remaining=18,
+        category="social",
+        stackable=True,
+    )

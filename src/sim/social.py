@@ -260,33 +260,7 @@ def maybe_romance(
 
 
 def maybe_interact(a: Student, b: Student, rel: Friendship) -> str | None:
-    """Resolve a social interaction. Updates affinity/level, returns flavor text."""
-    compat = compatibility(a, b)
-    gain = int(random.uniform(2, 6) * compat)
-    rel.affinity = min(100, rel.affinity + gain)
-
-    # Check for level-up
-    leveled_up = False
-    next_level = rel.level.next
-    if next_level and rel.affinity > FRIENDSHIP_LEVEL_THRESHOLDS.get(next_level, 999):
-        rel.level = next_level
-        leveled_up = True
-
-    # Generate text
-    templates = TEXT_TEMPLATES.get(rel.level, TEXT_TEMPLATES[FriendshipLevel.STRANGER])
-    text = random.choice(templates).format(a=a.name, b=b.name)
-
-    if leveled_up:
-        level_name = rel.level.name.lower().replace("_", " ")
-        text += f" They're now {level_name}s!"
-
-        # Add thoughts for both students
-        if rel.level == FriendshipLevel.BEST_FRIEND:
-            add_thought(a.thoughts, thought_best_friend(b.name))
-            add_thought(b.thoughts, thought_best_friend(a.name))
-        else:
-            add_thought(a.thoughts, thought_friendship_levelup(b.name))
-            add_thought(b.thoughts, thought_friendship_levelup(a.name))
-
-    rel.history.append(text)
-    return text
+    """Resolve a social interaction. Draws a topic and delegates to conversation system."""
+    from .conversation import draw_topic, resolve_conversation
+    topic = draw_topic(rel.level)
+    return resolve_conversation(a, b, rel, topic)
