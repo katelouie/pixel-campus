@@ -17,14 +17,16 @@ class NeedType(Enum):
     ATHLETICS = "athletics"
 
 
-# Default decay rates per tick for each need type
+# Default decay rates per tick for each need type.
+# 48 ticks/day — these rates are tuned so needs create real pressure without being brutal.
+# Overnight recovery (high_school.json day_reset) is set to roughly break even with OKAY sleep.
 DEFAULT_DECAY_RATES: dict[NeedType, float] = {
-    NeedType.FUN: 0.3,
-    NeedType.SOCIAL: 0.25,
-    NeedType.REST: 0.5,  # fastest -- tiredness is constant pressure
-    NeedType.ACADEMICS: 0.15,
-    NeedType.CREATIVITY: 0.15,
-    NeedType.ATHLETICS: 0.2,
+    NeedType.FUN:        0.6,   # 28.8/day — needs active fun or slowly drains
+    NeedType.SOCIAL:     0.5,   # 24.0/day — socializing is required, not optional
+    NeedType.REST:       0.8,   # 38.4/day — tiredness accumulates noticeably
+    NeedType.ACADEMICS:  0.3,   # 14.4/day — background anxiety without study
+    NeedType.CREATIVITY: 0.3,   # 14.4/day
+    NeedType.ATHLETICS:  0.35,  # 16.8/day
 }
 
 

@@ -14,10 +14,10 @@
   "social_text_file": "social_text.json",
   "starting_room": "Cafeteria",
   "day_reset": {
-    "rest_recovery": [35, 55],
-    "fun_recovery": [10, 20],
-    "social_recovery": [8, 15],
-    "minor_recovery": [3, 8]
+    "rest_recovery": [18, 28],
+    "fun_recovery": [6, 12],
+    "social_recovery": [4, 9],
+    "minor_recovery": [2, 5]
   },
   "names_file": "names.json"
 }

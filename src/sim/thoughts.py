@@ -190,24 +190,48 @@ def thought_grades_improving() -> Thought:
 
 
 def thought_slept_well() -> Thought:
-    """Had good rest at end of day."""
+    """Had a decent night's sleep."""
     return Thought(
         label="Slept well",
         mood_effect=3.0,
-        duration_ticks=42,  # ~half a day
-        ticks_remaining=42,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="rest",
+        source_id="sleep_quality",
+    )
+
+
+def thought_great_sleep() -> Thought:
+    """Had an unusually good night's sleep."""
+    return Thought(
+        label="Slept really well last night",
+        mood_effect=6.0,
+        duration_ticks=48,
+        ticks_remaining=48,
         category="rest",
         source_id="sleep_quality",
     )
 
 
 def thought_exhausted() -> Thought:
-    """Was exhausted at end of day."""
+    """Slept poorly."""
     return Thought(
-        label="So tired...",
+        label="Didn't sleep well...",
         mood_effect=-4.0,
-        duration_ticks=42,
-        ticks_remaining=42,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="rest",
+        source_id="sleep_quality",
+    )
+
+
+def thought_terrible_sleep() -> Thought:
+    """Barely slept at all."""
+    return Thought(
+        label="Barely slept at all",
+        mood_effect=-8.0,
+        duration_ticks=48,
+        ticks_remaining=48,
         category="rest",
         source_id="sleep_quality",
     )
@@ -337,6 +361,100 @@ def thought_found_common_ground(friend_name: str) -> Thought:
         ticks_remaining=42,
         category="social",
         stackable=True,
+    )
+
+
+# -------------------------------------------------------------------
+# WEATHER + ENVIRONMENT THOUGHTS
+# -------------------------------------------------------------------
+
+
+def thought_weather_match(weather_name: str) -> Thought:
+    """Student's favorite weather today."""
+    return Thought(
+        label=f"Love this {weather_name} weather",
+        mood_effect=4.0,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="environment",
+        source_id="weather_mood",
+    )
+
+
+def thought_weather_mismatch(weather_name: str) -> Thought:
+    """Unpleasant weather for this student."""
+    return Thought(
+        label=f"Hate this {weather_name} weather",
+        mood_effect=-3.0,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="environment",
+        source_id="weather_mood",
+    )
+
+
+def thought_weather_storm() -> Thought:
+    """Storm regardless of preference — rough for everyone."""
+    return Thought(
+        label="This weather is miserable",
+        mood_effect=-5.0,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="environment",
+        source_id="weather_mood",
+    )
+
+
+def thought_sunny_day() -> Thought:
+    """Mild positive for everyone on sunny days."""
+    return Thought(
+        label="Nice day outside",
+        mood_effect=2.0,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="environment",
+        source_id="weather_ambient",
+    )
+
+
+def thought_snow_day() -> Thought:
+    """Snow — fun novelty for everyone."""
+    return Thought(
+        label="It's snowing!",
+        mood_effect=3.0,
+        duration_ticks=48,
+        ticks_remaining=48,
+        category="environment",
+        source_id="weather_ambient",
+    )
+
+
+# -------------------------------------------------------------------
+# TIME-OF-DAY THOUGHTS
+# -------------------------------------------------------------------
+
+
+def thought_morning_person_boost() -> Thought:
+    """Morning person starting the school day in their element."""
+    return Thought(
+        label="Feeling sharp this morning",
+        mood_effect=3.0,
+        duration_ticks=24,
+        ticks_remaining=24,
+        category="environment",
+        source_id="time_of_day",
+    )
+
+
+def thought_not_a_morning_person() -> Thought:
+    """Evening/night person dragging through early school hours."""
+    return Thought(
+        label="Way too early for this",
+        mood_effect=-3.0,
+        duration_ticks=24,
+        ticks_remaining=24,
+        category="environment",
+        source_id="time_of_day",
     )
 
 

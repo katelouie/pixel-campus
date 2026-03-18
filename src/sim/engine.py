@@ -33,7 +33,7 @@ from .models import (
     StudentState,
     Year,
 )
-from .personality import Personality
+from .personality import Personality, TimeOfDay, Weather
 from .needs import NeedType, satisfy_need
 from .social import get_or_create_friendship, get_or_create_romance, maybe_interact, maybe_romance
 from .thoughts import (
@@ -43,13 +43,58 @@ from .thoughts import (
     thought_failing_subject,
     thought_grades_improving,
     thought_great_report_card,
+    thought_great_sleep,
     thought_lunch_social,
+    thought_morning_person_boost,
+    thought_not_a_morning_person,
     thought_slept_well,
+    thought_snow_day,
+    thought_sunny_day,
+    thought_terrible_sleep,
+    thought_weather_match,
+    thought_weather_mismatch,
+    thought_weather_storm,
 )
 from .traits import has_trait
 
 
 REPORT_CARD_INTERVAL: int = 7  # days between report cards
+
+# Sleep quality tiers: (label, weight, rest_range, thought_factory_or_None)
+# Weight is relative — Anxious trait shifts toward worse tiers.
+_SLEEP_TIERS = [
+    ("terrible", 10, (4,  12), thought_terrible_sleep),
+    ("poor",     20, (12, 20), thought_exhausted),
+    ("okay",     35, (20, 28), None),
+    ("good",     25, (28, 38), thought_slept_well),
+    ("great",    10, (38, 48), thought_great_sleep),
+]
+
+
+def _roll_sleep_quality(
+    sc: "ScenarioConfig", traits: list
+) -> tuple[float, "Thought | None"]:
+    """Roll overnight sleep quality for one student. Returns (rest_gain, thought_or_None).
+
+    Anxious trait shifts the distribution toward poor/terrible.
+    Overachiever also sleeps slightly worse (mind won't stop).
+    """
+    from .traits import has_trait
+    weights = [t[1] for t in _SLEEP_TIERS]
+
+    if has_trait(traits, "Anxious"):
+        # Shift 12 weight from good/great into poor/terrible
+        weights = [w + 6 if i < 2 else w - 6 if i >= 3 else w
+                   for i, w in enumerate(weights)]
+    if has_trait(traits, "Overachiever"):
+        weights = [w + 4 if i < 2 else w - 4 if i >= 3 else w
+                   for i, w in enumerate(weights)]
+
+    weights = [max(1, w) for w in weights]  # no negative weights
+    tier = random.choices(_SLEEP_TIERS, weights=weights, k=1)[0]
+    rest_gain = random.uniform(*tier[2])
+    thought = tier[3]() if tier[3] is not None else None
+    return rest_gain, thought
 
 
 @dataclass
@@ -71,6 +116,9 @@ class GameState:
 
     # Event bus — reactive systems subscribe here at startup
     bus: GameEventBus = field(default_factory=GameEventBus)
+
+    # Today's weather — rolled fresh each day
+    current_weather: Weather = field(default_factory=lambda: random.choice(list(Weather)))
 
     # Messages generated this tick
     tick_log: list[str] = field(default_factory=list)
@@ -442,29 +490,56 @@ class GameState:
             data={"day": self.clock.day, "points": day_points},
         ))
 
-        # Reset for new day
-        for student in self.students:
-            # Sleep quality thoughts (before we reset needs)
-            if student.needs[NeedType.REST].value > 70:
-                add_thought(student.thoughts, thought_slept_well(), bus=self.bus)
-            elif student.needs[NeedType.REST].value < 20:
-                add_thought(student.thoughts, thought_exhausted(), bus=self.bus)
+        # Roll tomorrow's weather and log it
+        self.current_weather = random.choice(list(Weather))
+        log.append(f"Tomorrow: {self.current_weather.value}.")
 
+        # Reset for new day
+        sc = self.scenario
+        for student in self.students:
             student.state = StudentState.IDLE
             student.destination = None
             student.travel_ticks_left = 0
             student.activity_ticks_left = 0
             student.chat_partner_id = None
 
-            # Overnight recovery (amounts from scenario config, respects trait satisfaction multipliers)
-            sc = self.scenario
             tr = student.traits
-            satisfy_need(student.needs, NeedType.REST, random.uniform(*sc.rest_recovery), traits=tr)
-            satisfy_need(student.needs, NeedType.FUN, random.uniform(*sc.fun_recovery), traits=tr)
-            satisfy_need(student.needs, NeedType.SOCIAL, random.uniform(*sc.social_recovery), traits=tr)
-            satisfy_need(student.needs, NeedType.ACADEMICS, random.uniform(*sc.minor_recovery), traits=tr)
-            satisfy_need(student.needs, NeedType.CREATIVITY, random.uniform(*sc.minor_recovery), traits=tr)
-            satisfy_need(student.needs, NeedType.ATHLETICS, random.uniform(*sc.minor_recovery), traits=tr)
+
+            # --- Sleep quality (replaces flat REST recovery) ---
+            rest_gain, sleep_thought = _roll_sleep_quality(sc, tr)
+            satisfy_need(student.needs, NeedType.REST, rest_gain, traits=tr)
+            if sleep_thought is not None:
+                add_thought(student.thoughts, sleep_thought, bus=self.bus)
+
+            # Overnight recovery for other needs
+            satisfy_need(student.needs, NeedType.FUN,        random.uniform(*sc.fun_recovery),    traits=tr)
+            satisfy_need(student.needs, NeedType.SOCIAL,     random.uniform(*sc.social_recovery), traits=tr)
+            satisfy_need(student.needs, NeedType.ACADEMICS,  random.uniform(*sc.minor_recovery),  traits=tr)
+            satisfy_need(student.needs, NeedType.CREATIVITY, random.uniform(*sc.minor_recovery),  traits=tr)
+            satisfy_need(student.needs, NeedType.ATHLETICS,  random.uniform(*sc.minor_recovery),  traits=tr)
+
+            # --- Weather thoughts ---
+            p = student.personality
+            if p:
+                if p.weather == self.current_weather:
+                    add_thought(student.thoughts, thought_weather_match(self.current_weather.value), bus=self.bus)
+                elif self.current_weather == Weather.STORM:
+                    add_thought(student.thoughts, thought_weather_storm(), bus=self.bus)
+                elif self.current_weather == Weather.RAIN:
+                    add_thought(student.thoughts, thought_weather_mismatch("rainy"), bus=self.bus)
+
+            # Ambient weather bonus (sunny/snow feel good for everyone)
+            if self.current_weather == Weather.SUNNY:
+                add_thought(student.thoughts, thought_sunny_day(), bus=self.bus)
+            elif self.current_weather == Weather.SNOW:
+                add_thought(student.thoughts, thought_snow_day(), bus=self.bus)
+
+            # --- Time-of-day nudge ---
+            if p:
+                if p.time_of_day == TimeOfDay.MORNING:
+                    add_thought(student.thoughts, thought_morning_person_boost(), bus=self.bus)
+                elif p.time_of_day in (TimeOfDay.EVENING, TimeOfDay.NIGHT):
+                    add_thought(student.thoughts, thought_not_a_morning_person(), bus=self.bus)
 
         # Move to next day
         self._lunch_dispatched = False
