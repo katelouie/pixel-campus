@@ -19,6 +19,7 @@ from .behaviors import _autonomous_decision, process_student, send_to_room
 from .clock import TICKS_PER_DAY, GameClock
 from .defs import GameDefs, ScenarioConfig
 from .events import SchoolEvent, check_for_event, resolve_event
+from .game_events import GameEvent, GameEventBus, GameEventType
 from .journal import generate_journal_entry
 from .models import (
     Friendship,
@@ -67,6 +68,9 @@ class GameState:
 
     # Scenario configuration (drives game parameters)
     scenario: ScenarioConfig = field(default_factory=ScenarioConfig)
+
+    # Event bus — reactive systems subscribe here at startup
+    bus: GameEventBus = field(default_factory=GameEventBus)
 
     # Messages generated this tick
     tick_log: list[str] = field(default_factory=list)
@@ -378,12 +382,12 @@ class GameState:
                 return
 
         rel = get_or_create_friendship(self.friendships, a, b)
-        text = maybe_interact(a, b, rel)
+        text = maybe_interact(a, b, rel, bus=self.bus)
 
         # Romance tick: runs alongside friendship, weighted by compatibility
         romance_rel = get_or_create_romance(self.romances, a, b)
         location_boost = 1.5 if room.name == "Quad" else 1.0
-        romance_text = maybe_romance(a, b, romance_rel, friendship=rel, location_boost=location_boost)
+        romance_text = maybe_romance(a, b, romance_rel, friendship=rel, location_boost=location_boost, bus=self.bus)
         if romance_text:
             self.tick_log.append(romance_text)
 
@@ -433,13 +437,18 @@ class GameState:
         if self.total_points >= self.graduation_target:
             log.append("GRADUATION!! Your students made it!")
 
+        self.bus.emit(GameEvent(
+            GameEventType.DAY_ENDED,
+            data={"day": self.clock.day, "points": day_points},
+        ))
+
         # Reset for new day
         for student in self.students:
             # Sleep quality thoughts (before we reset needs)
             if student.needs[NeedType.REST].value > 70:
-                add_thought(student.thoughts, thought_slept_well())
+                add_thought(student.thoughts, thought_slept_well(), bus=self.bus)
             elif student.needs[NeedType.REST].value < 20:
-                add_thought(student.thoughts, thought_exhausted())
+                add_thought(student.thoughts, thought_exhausted(), bus=self.bus)
 
             student.state = StudentState.IDLE
             student.destination = None
@@ -496,12 +505,18 @@ class GameState:
                     add_thought(
                         student.thoughts,
                         thought_failing_subject(subj.value.capitalize()),
+                        bus=self.bus,
                     )
+                    self.bus.emit(GameEvent(
+                        GameEventType.GRADE_FAILED,
+                        student_ids=[student.student_id],
+                        data={"subject": subj.value},
+                    ))
                 elif grade.letter not in ("A", "B"):
                     all_good = False
 
             if all_good and student.grades:
-                add_thought(student.thoughts, thought_great_report_card())
+                add_thought(student.thoughts, thought_great_report_card(), bus=self.bus)
 
             # Check for improvement (compare effective grade to baseline)
             improving = any(
@@ -509,7 +524,7 @@ class GameState:
                 for grade in student.grades.values()
             )
             if improving and not has_failing:
-                add_thought(student.thoughts, thought_grades_improving())
+                add_thought(student.thoughts, thought_grades_improving(), bus=self.bus)
 
         return log
 

@@ -11,6 +11,7 @@ Inspired by RimWorld's interaction/opinion system.
 import random
 from enum import Enum
 
+from .game_events import GameEvent, GameEventBus, GameEventType
 from .models import Friendship, FriendshipLevel, Skill, Student
 from .needs import NeedType, satisfy_need
 from .personality import Worldview
@@ -233,7 +234,8 @@ def _make_text(
 # ------------------------------------------------------------------
 
 def resolve_conversation(
-    a: Student, b: Student, rel: Friendship, topic: ConversationTopic
+    a: Student, b: Student, rel: Friendship, topic: ConversationTopic,
+    bus: GameEventBus | None = None,
 ) -> str:
     """Resolve a topic-driven conversation between two students.
 
@@ -282,6 +284,19 @@ def resolve_conversation(
     if next_level and rel.affinity > FRIENDSHIP_LEVEL_THRESHOLDS.get(next_level, 999):
         rel.level = next_level
         leveled_up = True
+
+    # Emit bus events
+    if bus:
+        if leveled_up:
+            bus.emit(GameEvent(
+                GameEventType.FRIENDSHIP_LEVEL_UP,
+                student_ids=[a.student_id, b.student_id],
+                data={"level": rel.level.name},
+            ))
+        if outcome == ConversationOutcome.CONFLICT:
+            bus.emit(GameEvent(GameEventType.CHAT_CONFLICT, student_ids=[a.student_id, b.student_id]))
+        elif outcome == ConversationOutcome.MATCH:
+            bus.emit(GameEvent(GameEventType.CHAT_MATCH, student_ids=[a.student_id, b.student_id]))
 
     # Generate thoughts
     if outcome == ConversationOutcome.MATCH:

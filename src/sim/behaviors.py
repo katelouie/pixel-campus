@@ -9,6 +9,7 @@ import random
 from typing import TYPE_CHECKING
 
 from .academics import apply_activity_to_grades
+from .game_events import GameEventBus
 from .models import SKILL_TO_ACTIVITY, Room, Skill, Student, StudentState
 from .needs import NeedType, satisfy_need, tick_needs
 from .thoughts import (
@@ -91,7 +92,7 @@ def process_student(student: Student, state: "GameState") -> list[str]:
             | StudentState.CREATING
             | StudentState.SOCIALIZING
         ):
-            log.extend(_process_activity(student))
+            log.extend(_process_activity(student, bus=state.bus))
         case StudentState.CHATTING:
             log.extend(_process_chatting(student, state))
 
@@ -104,13 +105,13 @@ def process_student(student: Student, state: "GameState") -> list[str]:
 
     # Critical need thoughts (refresh while need stays low)
     if student.needs[NeedType.REST].value < 10:
-        add_thought(student.thoughts, thought_running_on_fumes())
+        add_thought(student.thoughts, thought_running_on_fumes(), bus=state.bus)
     if student.needs[NeedType.FUN].value < 15:
-        add_thought(student.thoughts, thought_so_bored())
+        add_thought(student.thoughts, thought_so_bored(), bus=state.bus)
     if student.needs[NeedType.SOCIAL].value < 20:
-        add_thought(student.thoughts, thought_lonely())
+        add_thought(student.thoughts, thought_lonely(), bus=state.bus)
     if student.needs[NeedType.ACADEMICS].value < 15:
-        add_thought(student.thoughts, thought_academic_pressure())
+        add_thought(student.thoughts, thought_academic_pressure(), bus=state.bus)
 
     return log
 
@@ -150,7 +151,7 @@ def _process_traveling(student: Student) -> list[str]:
     return log
 
 
-def _process_activity(student: Student) -> list[str]:
+def _process_activity(student: Student, bus: GameEventBus | None = None) -> list[str]:
     """Process 1 tick of an ongoing activity (studying, exercising, etc.)"""
     log: list[str] = []
     room = student.location
@@ -169,7 +170,7 @@ def _process_activity(student: Student) -> list[str]:
     new_skill = student.skills[room.skill_boost]
     for threshold in (25, 50, 75, 100):
         if old_skill < threshold <= new_skill:
-            add_thought(student.thoughts, thought_skill_milestone(room.skill_boost.value, threshold))
+            add_thought(student.thoughts, thought_skill_milestone(room.skill_boost.value, threshold), bus=bus)
 
     # Apply need satisfaction from this room (traits modify satisfaction amounts)
     for need_key, amount in room.needs_satisfied.items():
@@ -194,13 +195,13 @@ def _process_activity(student: Student) -> list[str]:
             thought.mood_effect *= combined_thought_mult(
                 student.traits, thought.category, thought.mood_effect
             )
-            add_thought(student.thoughts, thought)
+            add_thought(student.thoughts, thought, bus=bus)
         elif room.skill_boost == student.dreaded_skill:
             thought = thought_activity_dreaded(room.skill_boost.value)
             thought.mood_effect *= combined_thought_mult(
                 student.traits, thought.category, thought.mood_effect
             )
-            add_thought(student.thoughts, thought)
+            add_thought(student.thoughts, thought, bus=bus)
         student.state = StudentState.IDLE
 
     return log

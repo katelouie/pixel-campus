@@ -9,6 +9,8 @@ Inspired by Rimworld's thought/mood stack system.
 
 from dataclasses import dataclass, field
 
+from .game_events import GameEvent, GameEventBus, GameEventType
+
 
 @dataclass
 class Thought:
@@ -34,7 +36,9 @@ def tick_thoughts(thoughts: list[Thought]) -> list[Thought]:
     return [t for t in thoughts if not t.expired]
 
 
-def add_thought(thoughts: list[Thought], thought: Thought) -> None:
+def add_thought(
+    thoughts: list[Thought], thought: Thought, bus: GameEventBus | None = None
+) -> None:
     """Add a thought, respecting stacking rules.
 
     If not stackable, replaces any existing thought with the same source_id.
@@ -43,6 +47,15 @@ def add_thought(thoughts: list[Thought], thought: Thought) -> None:
     if not thought.stackable and thought.source_id:
         thoughts[:] = [t for t in thoughts if t.source_id != thought.source_id]
     thoughts.append(thought)
+    if bus and abs(thought.mood_effect) >= 3:
+        bus.emit(GameEvent(
+            GameEventType.THOUGHT_ADDED,
+            data={
+                "mood_effect": thought.mood_effect,
+                "category": thought.category,
+                "label": thought.label,
+            },
+        ))
 
 
 def sum_thought_effects(thoughts: list[Thought]) -> float:

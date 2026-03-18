@@ -5,6 +5,7 @@ level up relationships
 """
 
 import random
+from .game_events import GameEvent, GameEventBus, GameEventType
 from .models import Friendship, FriendshipLevel, Romance, RomanceLevel, Skill, Student
 from .personality import RomanceInterest
 from .thoughts import add_thought, thought_best_friend, thought_crush, thought_dating, thought_friendship_levelup
@@ -179,7 +180,7 @@ def get_or_create_romance(
 
 def maybe_romance(
     a: Student, b: Student, rel: Romance, friendship: Friendship | None = None,
-    location_boost: float = 1.0,
+    location_boost: float = 1.0, bus: GameEventBus | None = None,
 ) -> str | None:
     """Resolve a romantic interaction tick. Updates directed feelings/affinity.
 
@@ -226,6 +227,11 @@ def maybe_romance(
                 if next_level == RomanceLevel.CRUSH:
                     logs.append(f"{student.name} has developed a crush on {other.name}.")
                     add_thought(student.thoughts, thought_crush(other.name))
+                    if bus:
+                        bus.emit(GameEvent(
+                            GameEventType.ROMANCE_SPARK,
+                            student_ids=[student.student_id, other.student_id],
+                        ))
 
     # Dating: only happens when BOTH have reached CRUSH and compatibility is high
     if rel.is_mutual_crush and compat > 0.6 and random.random() < 0.1:
@@ -234,6 +240,11 @@ def maybe_romance(
         logs.append(f"{a.name} and {b.name} are officially dating!")
         add_thought(a.thoughts, thought_dating(b.name))
         add_thought(b.thoughts, thought_dating(a.name))
+        if bus:
+            bus.emit(GameEvent(
+                GameEventType.ROMANCE_DATING,
+                student_ids=[a.student_id, b.student_id],
+            ))
 
     # Flavor text from templates
     if rel.is_dating:
@@ -261,8 +272,10 @@ def maybe_romance(
     return result
 
 
-def maybe_interact(a: Student, b: Student, rel: Friendship) -> str | None:
+def maybe_interact(
+    a: Student, b: Student, rel: Friendship, bus: GameEventBus | None = None
+) -> str | None:
     """Resolve a social interaction. Draws a topic and delegates to conversation system."""
     from .conversation import draw_topic, resolve_conversation
     topic = draw_topic(rel.level)
-    return resolve_conversation(a, b, rel, topic)
+    return resolve_conversation(a, b, rel, topic, bus=bus)

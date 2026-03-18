@@ -8,6 +8,8 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **EventBus** (`src/sim/game_events.py`): `GameEventType`, `GameEvent`, `GameEventBus`. Synchronous pub/sub system for simulation events. `GameState` gains a `bus` field. Emit sites wired across `thoughts.py`, `conversation.py`, `social.py`, `engine.py`, `behaviors.py`. No subscribers yet — foundation for Storyteller, Sound, Day Summary, Drama Events.
+  - Events emitted: `THOUGHT_ADDED` (|mood_effect| ≥ 3), `FRIENDSHIP_LEVEL_UP`, `CHAT_CONFLICT`, `CHAT_MATCH`, `ROMANCE_SPARK`, `ROMANCE_DATING`, `GRADE_FAILED`, `DAY_ENDED`
 - Named weekdays in HUD banner: "Mon 9:35a" replaces "Day 1 | 9:35 AM". `GameClock` gains `weekday_str` and `day_time_str` properties.
 
 ### Changed
