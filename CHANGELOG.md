@@ -46,6 +46,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `favorite_skill` / `dreaded_skill` non-determinism: traitless students now seed from `student_id` via `random.Random`, returning a stable value across multiple calls in the same tick.
 - Music Room activity state: `Skill.MUSIC` now maps to `StudentState.CREATING` in `SKILL_TO_ACTIVITY` (was falling back to SOCIALIZING).
 - Duplicate `FRIENDSHIP_LEVEL_THRESHOLDS`: `conversation.py` now imports the canonical copy from `social.py`.
+- **Grade system overhaul** (`academics.py`): grades were flat C-range for all 14 days. Root causes: drift rate too aggressive, skill-to-grade multiplier too small, and Music Room never visited autonomously.
+  - `DRIFT_RATE`: `0.01 → 0.003` (~4-day half-life for gains; was ~18 hours)
+  - `SKILL_TO_GRADE`: `0.15 → 0.30` (2× bigger per-session gains — studying visibly moves the needle)
+  - Added **baseline creep**: when `grade.value > baseline + 5`, baseline rises at 0.002/tick. Sustained effort raises your floor, not just your ceiling.
+  - Added **grade inertia / sticky zones**: drift runs at 25% strength in the 4 points above each base letter threshold (90/80/70/60). Earned letter grades defend themselves — a student with a B doesn't drop to C just because they spent two days on the party event.
+  - Result: grades climb C → B- range over 14 days of autonomous play; player-directed studying reaches B/B+ territory.
+- **Music Room routing** (`behaviors.py`): Music Room was never visited autonomously because `NEED_TO_SKILL` only mapped `CREATIVITY → Skill.CREATIVITY` (Art Room). Renamed to `NEED_TO_SKILLS` with list values; CREATIVITY now routes to both Art Room and Music Room. Music grades now climb (C → C+ over 14 days) instead of sitting flat.
 
 ### Planned
 See `planning/TODO.md` for prioritized upcoming work.

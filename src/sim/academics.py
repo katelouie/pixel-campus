@@ -53,11 +53,15 @@ class Grade:
     recent_bonus: float = 0.0  # temporary boost from recent activity
 
     # Tuning constants
-    DRIFT_RATE: float = 0.01       # 1% drift toward baseline per tick
+    DRIFT_RATE: float = 0.003      # drift toward baseline per tick (~4-day half-life for gains)
     BONUS_DECAY: float = 0.3       # recent_bonus decays this much per tick
     BONUS_ON_ACTIVITY: float = 2.0  # bonus added when doing related activity
     MAX_BONUS: float = 10.0        # cap on recent_bonus
-    SKILL_TO_GRADE: float = 0.15   # multiplier: skill_gain * this = grade gain
+    SKILL_TO_GRADE: float = 0.30   # multiplier: skill_gain * this = grade gain (2x old value)
+    BASELINE_RISE_RATE: float = 0.002  # baseline creeps up when value is well above it
+    BASELINE_RISE_THRESHOLD: float = 5.0  # points above baseline needed to trigger creep
+    STICKY_ZONE: float = 4.0       # points above each letter-grade threshold where drag kicks in
+    DRAG_FACTOR: float = 0.25      # drift strength inside sticky zone
 
     @property
     def letter(self) -> str:
@@ -111,10 +115,34 @@ def create_default_grades() -> dict[Subject, Grade]:
     return {subj: Grade(subject=subj) for subj in Subject}
 
 
+_LETTER_THRESHOLDS = (90.0, 80.0, 70.0, 60.0)
+
+
 def tick_grade(grade: Grade) -> None:
-    """Per-tick grade maintenance: drift toward baseline, decay recent bonus."""
-    # Drift toward baseline (without effort, grades regress to the mean)
-    grade.value += (grade.baseline - grade.value) * grade.DRIFT_RATE
+    """Per-tick grade maintenance: drift toward baseline, decay recent bonus.
+
+    Two mechanics slow grade loss:
+    - Sticky zones: drift runs at 25% strength in the 4 points above each base
+      letter threshold (90/80/70/60), so earned letter grades defend themselves.
+    - Baseline creep: when grade.value is consistently well above baseline,
+      the baseline slowly rises — sustained effort raises your floor.
+    """
+    # Compute raw drift
+    drift = (grade.baseline - grade.value) * grade.DRIFT_RATE
+
+    # Apply sticky zone drag near base letter-grade thresholds (downward drift only)
+    if drift < 0:
+        for threshold in _LETTER_THRESHOLDS:
+            if threshold < grade.value <= threshold + grade.STICKY_ZONE:
+                drift *= grade.DRAG_FACTOR
+                break
+
+    grade.value += drift
+
+    # Baseline creep: sustained above-baseline performance raises the floor
+    if grade.value > grade.baseline + grade.BASELINE_RISE_THRESHOLD:
+        grade.baseline = min(grade.value - grade.BASELINE_RISE_THRESHOLD,
+                             grade.baseline + grade.BASELINE_RISE_RATE)
 
     # Decay recent activity bonus
     grade.recent_bonus = max(0.0, grade.recent_bonus - grade.BONUS_DECAY)

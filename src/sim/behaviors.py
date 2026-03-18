@@ -29,13 +29,15 @@ if TYPE_CHECKING:
     from .engine import GameState
 
 
-# Map NeedType to the room skill that satisfies it
-NEED_TO_SKILL: dict[NeedType, Skill] = {
-    NeedType.ACADEMICS: Skill.ACADEMICS,
-    NeedType.ATHLETICS: Skill.ATHLETICS,
-    NeedType.CREATIVITY: Skill.CREATIVITY,
-    NeedType.SOCIAL: Skill.SOCIAL,
-    NeedType.FUN: Skill.SOCIAL,  # cafeteria / socializing is fun
+# Map NeedType to the room skills that satisfy it (list to support multiple room types per need).
+# CREATIVITY covers both Art Room and Music Room — students autonomously pick either.
+# FUN maps to SOCIAL rooms because cafeteria/quad satisfies both needs via socializing.
+NEED_TO_SKILLS: dict[NeedType, list[Skill]] = {
+    NeedType.ACADEMICS: [Skill.ACADEMICS],
+    NeedType.ATHLETICS: [Skill.ATHLETICS],
+    NeedType.CREATIVITY: [Skill.CREATIVITY, Skill.MUSIC],  # Art Room or Music Room
+    NeedType.SOCIAL:     [Skill.SOCIAL],
+    NeedType.FUN:        [Skill.SOCIAL],  # cafeteria / socializing is fun
 }
 
 
@@ -281,10 +283,10 @@ def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
     )
 
     # Find a room that satisfies this need
-    target_skill = NEED_TO_SKILL.get(lowest_need.need_type)
-    if target_skill:
+    target_skills = NEED_TO_SKILLS.get(lowest_need.need_type)
+    if target_skills:
         matching_rooms = [
-            r for r in state.rooms if r.skill_boost == target_skill
+            r for r in state.rooms if r.skill_boost in target_skills
         ]
         if matching_rooms:
             room = random.choice(matching_rooms)
