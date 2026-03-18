@@ -640,47 +640,82 @@ class CampusView(arcade.View):
     _ACTIVITY_VERB: dict = {}  # populated lazily below
 
     def _build_context_menu(
-        self, sx: int, sy: int, target: "Student", room: "Room | None" = None
+        self, sx: int, sy: int, target: "Student",
+        room: "Room | None" = None, single: bool = False
     ) -> dict:
-        """Build a context menu for acting on `target` relative to the selected student.
+        """Build a context menu for acting on `target`.
 
-        If `room` is provided (cursor was inside a room's Tiled bounds), a
-        room-specific activity option is appended to the menu.
+        `single=True` skips the two-student actions (Introduce/Separate/Encourage)
+        and only shows the room-activity option. Used when no student is selected.
+        If `room` is provided, a room-specific activity option is appended.
         """
         from src.sim.thoughts import add_thought, thought_encouraged
-        a = self._selected_sprite.student
         b = target
+        items: list = []
 
-        def _introduce():
-            dest = a.location or self._room_by_name.get("Cafeteria")
-            if dest is None:
-                dest = next(iter(self._room_by_name.values()))
-            self._hud.push_messages([
-                f"Introducing {a.name} and {b.name}...",
-                self._state.assign_student(a, dest),
-                self._state.assign_student(b, dest),
-            ])
-            self._sync_sprites_to_sim()
+        if not single and self._selected_sprite is not None:
+            a = self._selected_sprite.student
 
-        def _separate():
-            others = [r for r in self._room_by_name.values() if r != a.location]
-            if others:
-                dest = random.choice(others)
-                self._hud.push_messages([
-                    f"Separating {b.name} from {a.name}.",
+            def _introduce():
+                from src.sim.social import (
+                    get_or_create_friendship, get_or_create_romance,
+                    maybe_interact, maybe_romance,
+                )
+                dest = a.location or self._room_by_name.get("Cafeteria")
+                if dest is None:
+                    dest = next(iter(self._room_by_name.values()))
+                msgs = [
+                    f"Introducing {a.name} and {b.name}...",
+                    self._state.assign_student(a, dest),
                     self._state.assign_student(b, dest),
-                ])
+                ]
+                # Force an immediate social encounter — don't wait for the tick scheduler
+                rel = get_or_create_friendship(self._state.friendships, a, b)
+                text = maybe_interact(a, b, rel, bus=self._state.bus)
+                if text:
+                    msgs.append(text)
+                romance_rel = get_or_create_romance(self._state.romances, a, b)
+                romance_text = maybe_romance(a, b, romance_rel, friendship=rel, bus=self._state.bus)
+                if romance_text:
+                    msgs.append(romance_text)
+                self._hud.push_messages(msgs)
                 self._sync_sprites_to_sim()
 
-        def _encourage():
-            add_thought(b.thoughts, thought_encouraged(), bus=self._state.bus)
-            self._hud.push_messages([f"{a.name} encourages {b.name}."])
+            def _separate():
+                others = [r for r in self._room_by_name.values() if r != a.location]
+                if others:
+                    dest = random.choice(others)
+                    self._hud.push_messages([
+                        f"Separating {b.name} from {a.name}.",
+                        self._state.assign_student(b, dest),
+                    ])
+                    self._sync_sprites_to_sim()
 
-        items = [
-            (f"Introduce {a.name} & {b.name}", _introduce),
-            (f"Separate {b.name}",              _separate),
-            (f"Encourage {b.name}",             _encourage),
-        ]
+            def _encourage():
+                from src.sim.social import get_or_create_friendship
+                from src.sim.social import FRIENDSHIP_LEVEL_THRESHOLDS
+                from src.sim.models import FriendshipLevel
+                add_thought(b.thoughts, thought_encouraged(), bus=self._state.bus)
+                # Small friendship boost — encouragement warms people up
+                rel = get_or_create_friendship(self._state.friendships, a, b)
+                rel.affinity = min(100, rel.affinity + 5)
+                # Check if affinity crossed a level threshold
+                for lvl in reversed(list(FriendshipLevel)):
+                    threshold = FRIENDSHIP_LEVEL_THRESHOLDS.get(lvl, 0)
+                    if rel.affinity >= threshold and rel.level < lvl:
+                        rel.level = lvl
+                        self._hud.push_messages([
+                            f"{a.name} encourages {b.name}. (+mood, +friendship)",
+                            f"{a.name} and {b.name} are now {lvl.name.lower().replace('_', ' ')}s!",
+                        ])
+                        return
+                self._hud.push_messages([f"{a.name} encourages {b.name}. (+mood, +friendship)"])
+
+            items = [
+                (f"Introduce {a.name} & {b.name}", _introduce),
+                (f"Separate {b.name}",              _separate),
+                (f"Encourage {b.name}",             _encourage),
+            ]
 
         # Room-specific activity option when cursor is inside a room
         if room is not None:
@@ -796,30 +831,59 @@ class CampusView(arcade.View):
                 ZOOM_MIN, min(ZOOM_MAX, round(self._camera.zoom + scroll_y * ZOOM_STEP, 2))
             )
 
+    def _context_menu_contains(self, sx: int, sy: int) -> bool:
+        """True if (sx, sy) is inside the context menu bounding box."""
+        if not self._context_menu:
+            return False
+        mx, my = self._context_menu["x"], self._context_menu["y"]
+        total_h = len(self._context_menu["items"]) * self._ITEM_H + self._MENU_PAD * 2
+        return mx <= sx <= mx + self._MENU_W and my <= sy <= my + total_h
+
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        # Context menu: any click dismisses it; left-click on an item executes it
+        # Context menu handling:
+        # - Click on an item → execute + dismiss + eat click
+        # - Click inside menu background → dismiss + eat click
+        # - Click OUTSIDE menu → dismiss but fall through to normal handling
         if self._context_menu:
-            if button == arcade.MOUSE_BUTTON_LEFT:
+            inside = self._context_menu_contains(x, y)
+            if button == arcade.MOUSE_BUTTON_LEFT and inside:
                 i = self._context_menu_item_at(x, y)
                 if i is not None:
                     _, action = self._context_menu["items"][i]
+                    self._context_menu = None
                     action()
+                    return
             self._context_menu = None
-            return
+            if inside:
+                return  # clicked menu background — dismiss only
+            # Outside menu: dismiss silently and fall through to normal click
 
-        # Right-click on a student while another is selected → context menu
+        # Right-click → context menu
         if button == arcade.MOUSE_BUTTON_RIGHT:
-            if self._selected_sprite is not None:
-                zoom = self._camera.zoom
-                wx = (x - self.window.width  / 2) / zoom + self._camera.position[0]
-                wy = (y - self.window.height / 2) / zoom + self._camera.position[1]
-                clicked = arcade.get_sprites_at_point((wx, wy), self._sprite_list)
-                room_name = self._room_containing(wx, wy)
-                room = self._room_by_name.get(room_name) if room_name else None
-                if clicked and clicked[0] is not self._selected_sprite:
+            zoom = self._camera.zoom
+            wx = (x - self.window.width  / 2) / zoom + self._camera.position[0]
+            wy = (y - self.window.height / 2) / zoom + self._camera.position[1]
+            clicked = arcade.get_sprites_at_point((wx, wy), self._sprite_list)
+            room_name = self._room_containing(wx, wy)
+            room = self._room_by_name.get(room_name) if room_name else None
+            if clicked:
+                target_sprite = clicked[0]
+                # Two-student menu: A selected + right-clicking different student B
+                if (self._selected_sprite is not None
+                        and target_sprite is not self._selected_sprite):
                     self._context_menu = self._build_context_menu(
-                        x, y, clicked[0].student, room=room
+                        x, y, target_sprite.student, room=room
                     )
+                # Single-student shortcut: right-click any student (room activity only)
+                elif room is not None:
+                    self._context_menu = self._build_context_menu(
+                        x, y, target_sprite.student, room=room, single=True
+                    )
+            elif self._selected_sprite is not None and room is not None:
+                # Right-click on empty tile inside a room → send selected student there
+                self._context_menu = self._build_context_menu(
+                    x, y, self._selected_sprite.student, room=room, single=True
+                )
             return
 
         if button != arcade.MOUSE_BUTTON_LEFT:
@@ -859,14 +923,6 @@ class CampusView(arcade.View):
             self._hud.push_messages(
                 [f"Selected {self._selected_sprite.student.name}."]
             )
-        elif self._selected_sprite is not None:
-            # Click on empty space while a student is selected → send to room if inside one
-            room_name = self._room_containing(world_x, world_y)
-            room = self._room_by_name.get(room_name) if room_name else None
-            if room is not None:
-                msg = self._state.assign_student(self._selected_sprite.student, room)
-                self._hud.push_messages([msg])
-                self._sync_sprites_to_sim()
         else:
             self._selected_sprite = None
 
