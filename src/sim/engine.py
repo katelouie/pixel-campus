@@ -40,6 +40,7 @@ from .thoughts import (
     add_thought,
     thought_charmed_by,
     thought_exhausted,
+    thought_jealous,
     thought_failing_subject,
     thought_grades_improving,
     thought_great_report_card,
@@ -453,6 +454,50 @@ class GameState:
 
         if text:
             self.tick_log.append(text)
+
+        # Jealousy: other students who have a crush on A or B may feel a pang.
+        self._trigger_jealousy(a, b, room)
+
+    def _trigger_jealousy(self, a: Student, b: Student, room: Room) -> None:
+        """Fire jealousy thoughts for bystanders who have a crush on A or B.
+
+        Global trigger — C doesn't need to witness the chat. Being in the same
+        room raises the chance (90%) vs. hearing about it later (25%).
+        Only fires if the chat partner is a gender C is attracted to.
+        """
+        from .models import Gender
+        from .personality import RomanceInterest
+
+        _GENDER_MAP = {
+            RomanceInterest.BOYS:       Gender.MALE,
+            RomanceInterest.GIRLS:      Gender.FEMALE,
+            RomanceInterest.NON_BINARY: Gender.NON_BINARY,
+        }
+
+        def _attracted_to(c: Student, target: Student) -> bool:
+            if c.personality is None:
+                return True
+            return any(
+                _GENDER_MAP.get(ri) == target.gender
+                for ri in c.personality.romance_interest
+            )
+
+        for c in self.students:
+            if c.student_id in (a.student_id, b.student_id):
+                continue
+            for crush, interloper in ((a, b), (b, a)):
+                key = (min(c.student_id, crush.student_id), max(c.student_id, crush.student_id))
+                romance = self.romances.get(key)
+                if romance is None:
+                    continue
+                if romance.feelings_of(c.student_id) < RomanceLevel.CRUSH:
+                    continue
+                if not _attracted_to(c, interloper):
+                    continue
+                prob = 0.90 if (c.location is not None and c.location == room) else 0.25
+                if random.random() < prob:
+                    add_thought(c.thoughts, thought_jealous(crush.name, interloper.name), bus=self.bus)
+                break  # fire at most once per chat (first crush found wins)
 
     # -----------
     # ENDING DAY

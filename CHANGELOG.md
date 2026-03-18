@@ -8,6 +8,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Jealousy system** (`thoughts.py` + `engine.py`): global trigger — when A chats with B, any student C
+  with a crush on A or B fires `thought_jealous` if the chat partner is a gender C is attracted to.
+  Same-room = 90% chance; different room = 25% ("somehow you just know"). Mood effect: -4, 12 ticks.
+  Creates the cascade: spark → jealousy → bad mood → conflict → more drama.
 - **Simulation harness** (`tools/simulate.py`): headless Monte Carlo tool for tuning magic numbers. Runs N games × T days and reports per-day distributions: mood, romance, friendship, grades, skills, critical need pressure. `python -m tools.simulate --days 14 --runs 100`
 - **EventBus** (`src/sim/game_events.py`): `GameEventType`, `GameEvent`, `GameEventBus`. Synchronous pub/sub system for simulation events. `GameState` gains a `bus` field. Emit sites wired across `thoughts.py`, `conversation.py`, `social.py`, `engine.py`, `behaviors.py`. No subscribers yet — foundation for Storyteller, Sound, Day Summary, Drama Events.
   - Events emitted: `THOUGHT_ADDED` (|mood_effect| ≥ 3), `FRIENDSHIP_LEVEL_UP`, `CHAT_CONFLICT`, `CHAT_MATCH`, `ROMANCE_SPARK`, `ROMANCE_DATING`, `GRADE_FAILED`, `DAY_ENDED`

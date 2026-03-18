@@ -340,6 +340,25 @@ def thought_charmed_by(name: str) -> Thought:
     )
 
 
+def thought_jealous(crush_name: str, chatter_name: str) -> Thought:
+    """Crush is spending time with someone else."""
+    import random as _r
+    templates = [
+        f"Why does {crush_name} always end up talking to {chatter_name}?",
+        f"The way {crush_name} laughs with {chatter_name}... I hate this feeling.",
+        f"Does {crush_name} even notice me when {chatter_name} is around?",
+        f"Saw {crush_name} with {chatter_name} again. Why does it bother me?",
+    ]
+    return Thought(
+        label=_r.choice(templates),
+        mood_effect=-4.0,
+        duration_ticks=12,
+        ticks_remaining=12,
+        category="social",
+        source_id=f"jealous_{crush_name}_{chatter_name}",
+    )
+
+
 def thought_good_conversation(friend_name: str) -> Thought:
     """Had a pleasant conversation with someone."""
     return Thought(
