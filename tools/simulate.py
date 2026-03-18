@@ -60,6 +60,13 @@ def _snapshot(state: GameState, day: int, buckets: dict) -> None:
     )
     buckets["critical_pct"][day].append(critical_count / n * 100)
 
+    # --- Jealousy: % of students currently feeling jealous ---
+    jealous_count = sum(
+        1 for s in students
+        if any(t.source_id.startswith("jealous_") for t in s.thoughts)
+    )
+    buckets["jealous_pct"][day].append(jealous_count / n * 100)
+
     # --- Romance ---
     student_ids = {s.student_id for s in students}
     crush_students: set[int] = set()
@@ -186,12 +193,13 @@ def print_report(buckets: dict, days: list[int], n_runs: int) -> None:
     # --- Romance ---
     print()
     print("ROMANCE")
-    print(f"  {'Day':>4}  {'Crush%':^14}  {'Dating%':^14}")
-    print(f"  {'-'*4}  {'-'*14}  {'-'*14}")
+    print(f"  {'Day':>4}  {'Crush%':^14}  {'Dating%':^14}  {'Jealous%':^14}")
+    print(f"  {'-'*4}  {'-'*14}  {'-'*14}  {'-'*14}")
     for day in days:
-        crush  = _fmt(buckets["crush_pct"][day], pct=True)
-        dating = _fmt(buckets["dating_pct"][day], pct=True)
-        print(f"  {day:>4}  {crush:^14}  {dating:^14}")
+        crush   = _fmt(buckets["crush_pct"][day], pct=True)
+        dating  = _fmt(buckets["dating_pct"][day], pct=True)
+        jealous = _fmt(buckets["jealous_pct"][day], pct=True)
+        print(f"  {day:>4}  {crush:^14}  {dating:^14}  {jealous:^14}")
 
     # --- Friendship ---
     print()
