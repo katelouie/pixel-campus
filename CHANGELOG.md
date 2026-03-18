@@ -8,6 +8,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Right-click context menu** (`campus.py`): select student A, right-click student B to get a social action menu.
+  - **Introduce A & B**: sends both to A's current room (or Cafeteria as neutral ground)
+  - **Separate B**: sends B to a random room away from A
+  - **Encourage B**: fires `thought_encouraged()` (+5 mood, 24 ticks) — "Someone believed in me today"
+  - **Room-specific activity** (conditional): if the cursor is inside a room's Tiled bounds, a fourth option appears — "Study in Library", "Train in Gym", "Create in Music Room", "Hang out in Cafeteria", etc. Verb derived from the room's `skill_boost` via `SKILL_TO_ACTIVITY`.
+  - Menu nudges away from screen edges; any click dismisses it; clicking outside executes nothing.
 - **Jealousy system** (`thoughts.py` + `engine.py`): global trigger — when A chats with B, any student C
   with a crush on A or B fires `thought_jealous` if the chat partner is a gender C is attracted to.
   Same-room = 90% chance; different room = 25% ("somehow you just know"). Mood effect: -4, 12 ticks.

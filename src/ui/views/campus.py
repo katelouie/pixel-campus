@@ -636,32 +636,39 @@ class CampusView(arcade.View):
     _ITEM_H    = 26
     _MENU_PAD  = 6
 
-    def _build_context_menu(self, sx: int, sy: int, target: "Student") -> dict:
-        """Build a context menu for acting on `target` relative to the selected student."""
+    # Maps room skill_boost → activity verb for context menu labels
+    _ACTIVITY_VERB: dict = {}  # populated lazily below
+
+    def _build_context_menu(
+        self, sx: int, sy: int, target: "Student", room: "Room | None" = None
+    ) -> dict:
+        """Build a context menu for acting on `target` relative to the selected student.
+
+        If `room` is provided (cursor was inside a room's Tiled bounds), a
+        room-specific activity option is appended to the menu.
+        """
         from src.sim.thoughts import add_thought, thought_encouraged
-        from src.sim.behaviors import send_to_room
         a = self._selected_sprite.student
         b = target
 
         def _introduce():
-            # Send both to A's current room, or cafeteria as neutral ground
-            room = a.location or self._room_by_name.get("Cafeteria")
-            if room is None:
-                room = next(iter(self._room_by_name.values()))
+            dest = a.location or self._room_by_name.get("Cafeteria")
+            if dest is None:
+                dest = next(iter(self._room_by_name.values()))
             self._hud.push_messages([
                 f"Introducing {a.name} and {b.name}...",
-                self._state.assign_student(a, room),
-                self._state.assign_student(b, room),
+                self._state.assign_student(a, dest),
+                self._state.assign_student(b, dest),
             ])
             self._sync_sprites_to_sim()
 
         def _separate():
             others = [r for r in self._room_by_name.values() if r != a.location]
             if others:
-                room = random.choice(others)
+                dest = random.choice(others)
                 self._hud.push_messages([
                     f"Separating {b.name} from {a.name}.",
-                    self._state.assign_student(b, room),
+                    self._state.assign_student(b, dest),
                 ])
                 self._sync_sprites_to_sim()
 
@@ -674,6 +681,25 @@ class CampusView(arcade.View):
             (f"Separate {b.name}",              _separate),
             (f"Encourage {b.name}",             _encourage),
         ]
+
+        # Room-specific activity option when cursor is inside a room
+        if room is not None:
+            from src.sim.models import SKILL_TO_ACTIVITY, StudentState
+            _verbs = {
+                StudentState.STUDYING:    "Study",
+                StudentState.EXERCISING:  "Train",
+                StudentState.CREATING:    "Create",
+                StudentState.SOCIALIZING: "Hang out",
+            }
+            activity_state = SKILL_TO_ACTIVITY.get(room.skill_boost)
+            verb = _verbs.get(activity_state, "Go") if activity_state else "Go"
+
+            def _send_to_room(r=room):
+                self._hud.push_messages([self._state.assign_student(b, r)])
+                self._sync_sprites_to_sim()
+
+            items.append((f"{verb} in {room.name}", _send_to_room))
+
         # Nudge menu left/up if it would go off-screen
         mx = min(sx, self.window.width  - self._MENU_W - 4)
         my = min(sy, self.window.height - len(items) * self._ITEM_H - self._MENU_PAD * 2 - 4)
@@ -788,8 +814,12 @@ class CampusView(arcade.View):
                 wx = (x - self.window.width  / 2) / zoom + self._camera.position[0]
                 wy = (y - self.window.height / 2) / zoom + self._camera.position[1]
                 clicked = arcade.get_sprites_at_point((wx, wy), self._sprite_list)
+                room_name = self._room_containing(wx, wy)
+                room = self._room_by_name.get(room_name) if room_name else None
                 if clicked and clicked[0] is not self._selected_sprite:
-                    self._context_menu = self._build_context_menu(x, y, clicked[0].student)
+                    self._context_menu = self._build_context_menu(
+                        x, y, clicked[0].student, room=room
+                    )
             return
 
         if button != arcade.MOUSE_BUTTON_LEFT:
