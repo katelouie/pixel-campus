@@ -307,6 +307,7 @@ class CampusView(arcade.View):
         )
 
         self._selected_sprite: StudentSprite | None = None
+        self._context_menu: dict | None = None  # {x, y, target, items}
         # Initialise to None so first sync fires for all students
         self._prev_destinations: dict[int, str | None] = {
             s.student_id: None for s in self._state.students
@@ -604,6 +605,8 @@ class CampusView(arcade.View):
         self._hud.draw(self._state)
         if self._selected_sprite:
             self._draw_selection_card()
+        if self._context_menu:
+            self._draw_context_menu()
 
     def _draw_selection_card(self) -> None:
         """Draw the bottom-right mini info card for the selected student."""
@@ -624,6 +627,96 @@ class CampusView(arcade.View):
             self._card_mood_text.draw()
             self._card_state_text.draw()
             self._card_btn_text.draw()
+
+    # ------------------------------------------------------------------
+    # Context menu
+    # ------------------------------------------------------------------
+
+    _MENU_W    = 188
+    _ITEM_H    = 26
+    _MENU_PAD  = 6
+
+    def _build_context_menu(self, sx: int, sy: int, target: "Student") -> dict:
+        """Build a context menu for acting on `target` relative to the selected student."""
+        from src.sim.thoughts import add_thought, thought_encouraged
+        from src.sim.behaviors import send_to_room
+        a = self._selected_sprite.student
+        b = target
+
+        def _introduce():
+            # Send both to A's current room, or cafeteria as neutral ground
+            room = a.location or self._room_by_name.get("Cafeteria")
+            if room is None:
+                room = next(iter(self._room_by_name.values()))
+            self._hud.push_messages([
+                f"Introducing {a.name} and {b.name}...",
+                self._state.assign_student(a, room),
+                self._state.assign_student(b, room),
+            ])
+            self._sync_sprites_to_sim()
+
+        def _separate():
+            others = [r for r in self._room_by_name.values() if r != a.location]
+            if others:
+                room = random.choice(others)
+                self._hud.push_messages([
+                    f"Separating {b.name} from {a.name}.",
+                    self._state.assign_student(b, room),
+                ])
+                self._sync_sprites_to_sim()
+
+        def _encourage():
+            add_thought(b.thoughts, thought_encouraged(), bus=self._state.bus)
+            self._hud.push_messages([f"{a.name} encourages {b.name}."])
+
+        items = [
+            (f"Introduce {a.name} & {b.name}", _introduce),
+            (f"Separate {b.name}",              _separate),
+            (f"Encourage {b.name}",             _encourage),
+        ]
+        # Nudge menu left/up if it would go off-screen
+        mx = min(sx, self.window.width  - self._MENU_W - 4)
+        my = min(sy, self.window.height - len(items) * self._ITEM_H - self._MENU_PAD * 2 - 4)
+        return {"x": mx, "y": my, "target": b, "items": items}
+
+    def _context_menu_item_at(self, sx: int, sy: int) -> int | None:
+        """Return the index of the menu item under (sx, sy), or None."""
+        if not self._context_menu:
+            return None
+        mx, my = self._context_menu["x"], self._context_menu["y"]
+        items  = self._context_menu["items"]
+        for i in range(len(items)):
+            ib = my + self._MENU_PAD + i * self._ITEM_H
+            it = ib + self._ITEM_H
+            if mx <= sx <= mx + self._MENU_W and ib <= sy <= it:
+                return i
+        return None
+
+    def _draw_context_menu(self) -> None:
+        """Draw the right-click context menu in screen space."""
+        if not self._context_menu:
+            return
+        mx, my   = self._context_menu["x"], self._context_menu["y"]
+        items    = self._context_menu["items"]
+        total_h  = len(items) * self._ITEM_H + self._MENU_PAD * 2
+
+        with self._card_screen_cam.activate():
+            # Background panel
+            arcade.draw_lrbt_rectangle_filled(
+                mx, mx + self._MENU_W, my, my + total_h,
+                (20, 20, 35, 220),
+            )
+            arcade.draw_lrbt_rectangle_outline(
+                mx, mx + self._MENU_W, my, my + total_h,
+                (100, 100, 140, 200), border_width=1,
+            )
+            # Items
+            for i, (label, _) in enumerate(items):
+                text_y = my + self._MENU_PAD + i * self._ITEM_H + 6
+                arcade.draw_text(
+                    label, mx + 10, text_y,
+                    arcade.color.WHITE, font_size=11,
+                )
 
     def _draw_student_labels(self) -> None:
         for sid in self._student_sprites:
@@ -678,6 +771,27 @@ class CampusView(arcade.View):
             )
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
+        # Context menu: any click dismisses it; left-click on an item executes it
+        if self._context_menu:
+            if button == arcade.MOUSE_BUTTON_LEFT:
+                i = self._context_menu_item_at(x, y)
+                if i is not None:
+                    _, action = self._context_menu["items"][i]
+                    action()
+            self._context_menu = None
+            return
+
+        # Right-click on a student while another is selected → context menu
+        if button == arcade.MOUSE_BUTTON_RIGHT:
+            if self._selected_sprite is not None:
+                zoom = self._camera.zoom
+                wx = (x - self.window.width  / 2) / zoom + self._camera.position[0]
+                wy = (y - self.window.height / 2) / zoom + self._camera.position[1]
+                clicked = arcade.get_sprites_at_point((wx, wy), self._sprite_list)
+                if clicked and clicked[0] is not self._selected_sprite:
+                    self._context_menu = self._build_context_menu(x, y, clicked[0].student)
+            return
+
         if button != arcade.MOUSE_BUTTON_LEFT:
             return
         # Check log panel for clickable student names

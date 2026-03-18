@@ -359,6 +359,25 @@ def thought_jealous(crush_name: str, chatter_name: str) -> Thought:
     )
 
 
+def thought_encouraged() -> Thought:
+    """Player-triggered encouragement — someone believed in you."""
+    import random as _r
+    labels = [
+        "Someone believed in me today.",
+        "I can do this.",
+        "Feeling kind of unstoppable right now.",
+        "Someone said exactly what I needed to hear.",
+    ]
+    return Thought(
+        label=_r.choice(labels),
+        mood_effect=5.0,
+        duration_ticks=24,
+        ticks_remaining=24,
+        category="social",
+        source_id="encouraged",
+    )
+
+
 def thought_good_conversation(friend_name: str) -> Thought:
     """Had a pleasant conversation with someone."""
     return Thought(
