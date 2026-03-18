@@ -125,9 +125,11 @@ def _process_idle(student: Student, state: "GameState") -> list[str]:
     """Idle students recover slightly and might decide to do something."""
     log: list[str] = []
 
-    # Small recovery while idle
-    satisfy_need(student.needs, NeedType.REST, 1.0)
-    satisfy_need(student.needs, NeedType.FUN, 0.3)
+    # Small recovery while idle — being free is restful and mildly fun,
+    # but not as much as actual resting. REST 0.3 means idle alone won't
+    # keep REST from slowly declining — students need real sleep or rest rooms.
+    satisfy_need(student.needs, NeedType.REST, 0.3)
+    satisfy_need(student.needs, NeedType.FUN, 0.5)
 
     # Autonomous decision-making (suppressed during lunch — cafeteria dispatch handles it)
     if not state.is_lunch_period and random.random() < 0.06:

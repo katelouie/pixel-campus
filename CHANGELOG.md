@@ -14,6 +14,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Named weekdays in HUD banner: "Mon 9:35a" replaces "Day 1 | 9:35 AM". `GameClock` gains `weekday_str` and `day_time_str` properties.
 
 ### Changed
+- **Need decay retuning** (three-pass calibration against actual room satisfaction amounts):
+  - Key insight: `NeedType.FUN` maps to social rooms, so FUN/SOCIAL auto-satisfy via cafeteria. ACADEMICS/CREATIVITY/ATHLETICS need explicit player direction → lower decay so they pressure slowly rather than crash.
+  - Final rates: REST 0.60, SOCIAL 0.50, FUN 0.55, ACADEMICS 0.28, CREATIVITY 0.25, ATHLETICS 0.30
+  - Idle REST recovery: `1.0 → 0.3` per tick (was too generous — kept REST permanently at 100)
+  - Idle FUN recovery: `0.3 → 0.5` per tick (being idle is mildly fun)
+  - Overnight: `fun_recovery [8,14]`, `social_recovery [5,10]`, `minor_recovery [4,8]`
+  - Result: mood stable at 58-70, ACADEMICS orbits 40-47 (real but not punishing), ~32% critical pressure by day 14 without player guidance
 - **Romance tuning** (was effectively broken — expected days to first crush was 1,143):
   - `base_threshold`: `0.05 → 0.70` (sparks fly; high schoolers catch feelings fast)
   - `slow_burn` threshold: `0.15 → 0.90`

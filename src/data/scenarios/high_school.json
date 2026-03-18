@@ -15,9 +15,9 @@
   "starting_room": "Cafeteria",
   "day_reset": {
     "rest_recovery": [18, 28],
-    "fun_recovery": [6, 12],
-    "social_recovery": [4, 9],
-    "minor_recovery": [2, 5]
+    "fun_recovery": [8, 14],
+    "social_recovery": [5, 10],
+    "minor_recovery": [4, 8]
   },
   "names_file": "names.json"
 }

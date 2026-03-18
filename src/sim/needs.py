@@ -21,12 +21,17 @@ class NeedType(Enum):
 # 48 ticks/day — these rates are tuned so needs create real pressure without being brutal.
 # Overnight recovery (high_school.json day_reset) is set to roughly break even with OKAY sleep.
 DEFAULT_DECAY_RATES: dict[NeedType, float] = {
-    NeedType.FUN:        0.6,   # 28.8/day — needs active fun or slowly drains
-    NeedType.SOCIAL:     0.5,   # 24.0/day — socializing is required, not optional
-    NeedType.REST:       0.8,   # 38.4/day — tiredness accumulates noticeably
-    NeedType.ACADEMICS:  0.3,   # 14.4/day — background anxiety without study
-    NeedType.CREATIVITY: 0.3,   # 14.4/day
-    NeedType.ATHLETICS:  0.35,  # 16.8/day
+    # FUN and SOCIAL decay faster because cafeteria/quad efficiently tops both.
+    # Players who do nothing see FUN/SOCIAL stay healthy from autonomous socializing.
+    NeedType.FUN:        0.55,  # 26.4/day — cafeteria visits + idle roughly covers
+    NeedType.SOCIAL:     0.50,  # 24.0/day — chat + cafeteria roughly covers
+    NeedType.REST:       0.60,  # 28.8/day — sleep quality creates real variance
+
+    # These decay slowly because NO room auto-satisfies them via FUN routing.
+    # Players must actively direct students. Without help → slow decline over ~2 weeks.
+    NeedType.ACADEMICS:  0.28,  # 13.4/day — 1 study session/day roughly covers it
+    NeedType.CREATIVITY: 0.25,  # 12.0/day — 1 art/music session roughly covers it
+    NeedType.ATHLETICS:  0.30,  # 14.4/day — 1 gym session roughly covers it
 }
 
 
