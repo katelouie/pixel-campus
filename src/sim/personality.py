@@ -81,11 +81,11 @@ class Worldview(Enum):
 
 
 def _random_romance_interests() -> list[RomanceInterest]:
-    """Generate a random romance interest list. ~10% nobody, rest 1-3 genders."""
-    if random.random() < 0.10:
+    """Generate a random romance interest list. ~5% nobody, rest skewed toward multiple genders."""
+    if random.random() < 0.05:
         return []
     all_ri = list(RomanceInterest)
-    k = random.choices([1, 2, 3], weights=[65, 28, 7])[0]
+    k = random.choices([1, 2, 3], weights=[15, 45, 40])[0]
     return random.sample(all_ri, k=k)
 
 

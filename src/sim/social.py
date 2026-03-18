@@ -13,17 +13,16 @@ from .traits import has_trait
 
 FRIENDSHIP_LEVEL_THRESHOLDS: dict[FriendshipLevel, int] = {
     FriendshipLevel.STRANGER: 0,
-    FriendshipLevel.ACQUAINTANCE: 15,
-    FriendshipLevel.FRIEND: 35,
-    FriendshipLevel.CLOSE_FRIEND: 55,
-    FriendshipLevel.BEST_FRIEND: 75,
+    FriendshipLevel.ACQUAINTANCE: 15,  # first convo moves to acquaintance instantly anyway
+    FriendshipLevel.FRIEND: 10,        # a few good chats → friends
+    FriendshipLevel.CLOSE_FRIEND: 25,  # takes some real history
+    FriendshipLevel.BEST_FRIEND: 45,   # only a handful per school year
 }
 
 ROMANCE_LEVEL_THRESHOLDS: dict[RomanceLevel, int] = {
-    # TODO: rethink and tune romance level thresholds
     RomanceLevel.PLATONIC: 0,
-    RomanceLevel.CRUSH: 25,
-    RomanceLevel.DATING: 50,
+    RomanceLevel.CRUSH: 5,    # fast — high schoolers catch feelings quick
+    RomanceLevel.DATING: 20,  # takes a bit longer — mutual crush + time
 }
 
 TEXT_TEMPLATES: dict[FriendshipLevel | RomanceLevel, list[str]] = {
@@ -204,7 +203,7 @@ def maybe_romance(
         friendship is not None
         and friendship.level >= FriendshipLevel.CLOSE_FRIEND
     )
-    base_threshold = 0.15 if slow_burn else 0.05
+    base_threshold = 0.90 if slow_burn else 0.70
     # Attractive trait raises spark chance — anyone near them is more likely to catch feelings
     attractive_boost = 1.5 if (has_trait(a, "Attractive") or has_trait(b, "Attractive")) else 1.0
     # Flirt skill can up to double the base threshold; location + attractive stack on top
@@ -217,7 +216,7 @@ def maybe_romance(
             continue
         # Roll for affinity gain this tick
         if random.random() < spark_threshold * compat:
-            gain = int(random.uniform(3, 8) * compat)
+            gain = random.randint(3, 8)
             rel.add_affinity(student.student_id, gain)
             # Check for level-up
             next_level = current.next
@@ -233,8 +232,8 @@ def maybe_romance(
                             student_ids=[student.student_id, other.student_id],
                         ))
 
-    # Dating: only happens when BOTH have reached CRUSH and compatibility is high
-    if rel.is_mutual_crush and compat > 0.6 and random.random() < 0.1:
+    # Dating: both at CRUSH + low compat floor (compat > 0.6 was blocking everyone — max compat is ~0.5)
+    if rel.is_mutual_crush and compat > 0.2 and random.random() < 0.35:
         rel.set_feelings(a.student_id, RomanceLevel.DATING)
         rel.set_feelings(b.student_id, RomanceLevel.DATING)
         logs.append(f"{a.name} and {b.name} are officially dating!")

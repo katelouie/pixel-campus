@@ -8,11 +8,27 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Simulation harness** (`tools/simulate.py`): headless Monte Carlo tool for tuning magic numbers. Runs N games × T days and reports per-day distributions: mood, romance, friendship, grades, skills, critical need pressure. `python -m tools.simulate --days 14 --runs 100`
 - **EventBus** (`src/sim/game_events.py`): `GameEventType`, `GameEvent`, `GameEventBus`. Synchronous pub/sub system for simulation events. `GameState` gains a `bus` field. Emit sites wired across `thoughts.py`, `conversation.py`, `social.py`, `engine.py`, `behaviors.py`. No subscribers yet — foundation for Storyteller, Sound, Day Summary, Drama Events.
   - Events emitted: `THOUGHT_ADDED` (|mood_effect| ≥ 3), `FRIENDSHIP_LEVEL_UP`, `CHAT_CONFLICT`, `CHAT_MATCH`, `ROMANCE_SPARK`, `ROMANCE_DATING`, `GRADE_FAILED`, `DAY_ENDED`
 - Named weekdays in HUD banner: "Mon 9:35a" replaces "Day 1 | 9:35 AM". `GameClock` gains `weekday_str` and `day_time_str` properties.
 
 ### Changed
+- **Romance tuning** (was effectively broken — expected days to first crush was 1,143):
+  - `base_threshold`: `0.05 → 0.70` (sparks fly; high schoolers catch feelings fast)
+  - `slow_burn` threshold: `0.15 → 0.90`
+  - CRUSH affinity threshold: `25 → 5`
+  - DATING affinity threshold: `50 → 20`
+  - Affinity gain per spark: removed compat penalty (`randint(3, 8)` instead of `int(uniform(3,8) * compat)`)
+  - Dating gate: `compat > 0.6` → `compat > 0.2` (0.6 was impossible — max realistic compat is ~0.5)
+  - Dating probability per encounter: `0.10 → 0.35`
+  - Romance interest generation: weights `[65, 28, 7]` → `[15, 45, 40]` (more students interested in multiple genders); nobody rate `10% → 5%`
+  - Result: ~30% crush rate by day 2, ~32% dating by day 14
+- **Friendship tuning** (was taking ~88 days to become friends):
+  - FRIEND threshold: `35 → 10`
+  - CLOSE_FRIEND threshold: `55 → 25`
+  - BEST_FRIEND threshold: `75 → 45`
+  - Result: ~45% of pairs at FRIEND+ by day 14
 - Student count: 20 → 10 (`high_school.json`). 45 trackable relationship pairs vs. 190.
 - Skill gain now scaled by mood: `mood_mult = 0.5 + (mood_value / 100.0)`. Unhappy students learn slower; happy students learn faster. Unlocks the primary cascade loop.
 - Mood → conversation snapping: students with mood < 25 have a 30% chance to turn a NEUTRAL conversation CONFLICT. Bad days feel real.
