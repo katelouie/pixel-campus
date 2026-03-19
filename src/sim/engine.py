@@ -515,6 +515,12 @@ class GameState:
                 prob = 0.90 if (c.location is not None and c.location == room) else 0.25
                 if random.random() < prob:
                     add_thought(c.thoughts, thought_jealous(crush.name, interloper.name), bus=self.bus)
+                    # Journal: jealousy entry
+                    from .journal import generate_event_entry as _gen_event
+                    j_entry = _gen_event(c, self.clock.day, self.clock.tick,
+                                         "jealous", crush=crush.name, other=interloper.name)
+                    if j_entry:
+                        c.journal.append(j_entry)
                 break  # fire at most once per chat (first crush found wins)
 
     # -----------

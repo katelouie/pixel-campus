@@ -176,6 +176,15 @@ def _process_activity(student: Student, state: "GameState | None" = None) -> lis
     for threshold in (25, 50, 75, 100):
         if old_skill < threshold <= new_skill:
             add_thought(student.thoughts, thought_skill_milestone(room.skill_boost.value, threshold), bus=bus)
+            # Journal: skill milestone entry
+            if state is not None and hasattr(state, '_journal_sub') and state._journal_sub is not None:
+                from .journal import generate_event_entry
+                j_entry = generate_event_entry(
+                    student, state.clock.day, state.clock.tick,
+                    "skill_milestone", skill=room.skill_boost.value,
+                )
+                if j_entry:
+                    student.journal.append(j_entry)
 
     # Apply need satisfaction from this room (traits modify satisfaction amounts)
     for need_key, amount in room.needs_satisfied.items():

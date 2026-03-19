@@ -695,7 +695,14 @@ class CampusView(arcade.View):
                 from src.sim.social import get_or_create_friendship
                 from src.sim.social import FRIENDSHIP_LEVEL_THRESHOLDS
                 from src.sim.models import FriendshipLevel
+                from src.sim.journal import generate_event_entry
                 add_thought(b.thoughts, thought_encouraged(), bus=self._state.bus)
+                # Journal: encouraged entry
+                entry = generate_event_entry(
+                    b, self._state.clock.day, self._state.clock.tick, "encouraged",
+                )
+                if entry:
+                    b.journal.append(entry)
                 # Small friendship boost — encouragement warms people up
                 rel = get_or_create_friendship(self._state.friendships, a, b)
                 rel.affinity = min(100, rel.affinity + 5)
