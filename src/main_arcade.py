@@ -59,6 +59,8 @@ class PixelCampusWindow(arcade.Window):
 
 
 def main() -> None:
+    from src.ui.font import load_game_font
+    load_game_font()
     PixelCampusWindow()
     arcade.run()
 

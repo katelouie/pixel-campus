@@ -15,6 +15,7 @@ from PIL import Image as _PILImage
 
 from src.sim.engine import GameState
 from src.sim.models import StudentState
+from src.ui.font import FONT_NAME
 from src.ui.hud import HUD
 from src.ui.sprites import SIT_TYPE_BY_PREFIX, StudentSprite
 
@@ -250,7 +251,7 @@ class CampusView(arcade.View):
         self._student_sprites: dict[int, StudentSprite] = {}
         self._sprite_list = arcade.SpriteList()
         self._name_labels: dict[int, arcade.Text] = {}
-        self._mood_labels: dict[int, arcade.Text] = {}
+        # mood_labels removed — mood emoji no longer floats above sprites
         self._build_student_sprites(char_textures)
 
         # --- Activity bubbles ---
@@ -337,7 +338,7 @@ class CampusView(arcade.View):
         _empty_portrait = arcade.Texture(_PILImage.new("RGBA", (48, 96), (0, 0, 0, 0)))
         self._card_portrait_sprite = arcade.Sprite(_empty_portrait, scale=1.5)
         self._card_portrait_sprite.center_x = _card_left + _CARD_W // 2
-        # Portrait center: just inside top border, 72px from top inner edge (144/2)
+        # Portrait center: near top of card
         self._card_portrait_sprite.center_y = _card_bottom + _CARD_H - 32 - 72
 
         # "View Profile" button banner
@@ -352,30 +353,16 @@ class CampusView(arcade.View):
         # Stored for click-hit testing (screen coords)
         self._card_btn_bounds = (_btn_left, _btn_left + _BTN_W, _btn_bottom, _btn_top)
 
-        # Pre-built Text objects for the mini-card (text updated on selection change)
-        _portrait_bottom = self._card_portrait_sprite.center_y - 72  # 96*1.5/2
-        _cx = _card_left + _CARD_W // 2
-        self._card_name_text = arcade.Text(
-            "", _cx, _portrait_bottom - 16,
-            color=(40, 30, 20, 255), font_size=10, bold=True,
-            anchor_x="center", anchor_y="center",
-        )
-        self._card_mood_text = arcade.Text(
-            "", _cx, _portrait_bottom - 32,
-            color=(60, 50, 40, 255), font_size=9,
-            anchor_x="center", anchor_y="center",
-        )
-        self._card_state_text = arcade.Text(
-            "", _cx, _portrait_bottom - 48,
-            color=(80, 70, 55, 200), font_size=8,
-            anchor_x="center", anchor_y="center",
-        )
-        self._card_btn_text = arcade.Text(
-            "View Profile",
-            self._card_btn_sprite.center_x, self._card_btn_sprite.center_y,
-            color=(40, 30, 20, 255), font_size=8,
-            anchor_x="center", anchor_y="center",
-        )
+        # Mini-card bitmap text sprites (rebuilt on selection change)
+        from src.ui.font import FONT, FONT_DIM, FONT_HEADER
+        self._card_portrait_bottom = self._card_portrait_sprite.center_y - 72
+        self._card_cx = _card_left + _CARD_W // 2
+        self._card_text_sprites: list[arcade.Sprite] = []
+        # Static "Profile" button text
+        btn_tex = FONT.get_texture("Profile")
+        self._card_btn_sprite_text = arcade.Sprite(btn_tex)
+        self._card_btn_sprite_text.center_x = self._card_btn_sprite.center_x
+        self._card_btn_sprite_text.center_y = self._card_btn_sprite.center_y
 
     # ------------------------------------------------------------------
     # Setup helpers
@@ -463,22 +450,16 @@ class CampusView(arcade.View):
             self._student_sprites[student.student_id] = sprite
             self._sprite_list.append(sprite)
 
+            # Name label (arcade.Text — must not be Sprite, as Sprites interfere with click detection)
             self._name_labels[student.student_id] = arcade.Text(
                 student.name,
                 x=sprite.center_x,
-                y=sprite.top + 12,
-                color=arcade.color.BLACK,
+                y=sprite.bottom - 4,
+                color=(30, 25, 20, 255),
                 font_size=9,
-                font_name="Monaco",
+                font_name=FONT_NAME,
                 anchor_x="center",
-            )
-            self._mood_labels[student.student_id] = arcade.Text(
-                student.mood.icon,
-                x=sprite.center_x,
-                y=sprite.top + 2,
-                color=arcade.color.WHITE,
-                font_size=10,
-                anchor_x="center",
+                anchor_y="top",
             )
 
     # ------------------------------------------------------------------
@@ -491,13 +472,9 @@ class CampusView(arcade.View):
         for sid, sprite in self._student_sprites.items():
             sprite.update_movement()
             self._physics_engines[sid].update()
+            # Update name label position (centered below sprite)
             self._name_labels[sid].x = sprite.center_x
-            self._name_labels[sid].y = sprite.top + 12
-            self._mood_labels[sid].x = sprite.center_x
-            self._mood_labels[sid].y = sprite.top + 2
-            new_icon = sprite.student.mood.icon
-            if self._mood_labels[sid].text != new_icon:
-                self._mood_labels[sid].text = new_icon
+            self._name_labels[sid].y = sprite.bottom - 4
 
             # Trigger sit/stand animation when student arrives at their assigned point
             if not sprite.is_walking and not sprite.is_stationed:
@@ -615,18 +592,32 @@ class CampusView(arcade.View):
 
         self._card_portrait_sprite.texture = sprite.idle_textures["down"]
 
-        self._card_name_text.text  = student.name
-        self._card_mood_text.text  = f"{student.mood.icon} {student.mood.name.capitalize()}"
-        self._card_state_text.text = student.state.value.capitalize()
+        # Rebuild bitmap text sprites for current student
+        from src.ui.font import FONT, FONT_DIM, FONT_HEADER
+        self._card_text_sprites.clear()
+        cx = self._card_cx
+        y = self._card_portrait_bottom - 8
+
+        def _centered(font, text, cy):
+            tex = font.get_texture(text)
+            sp = arcade.Sprite(tex)
+            sp.center_x = cx
+            sp.center_y = cy
+            return sp
+
+        self._card_text_sprites.append(_centered(FONT_HEADER, student.name, y))
+        y -= FONT.char_height
+        self._card_text_sprites.append(_centered(FONT_DIM, f"{student.mood.name.capitalize()}", y))
+        y -= FONT.char_height - 2
+        self._card_text_sprites.append(_centered(FONT_DIM, student.state.value.capitalize(), y))
 
         with self._card_screen_cam.activate():
             arcade.draw_sprite(self._card_panel_sprite)
             arcade.draw_sprite(self._card_portrait_sprite)
             arcade.draw_sprite(self._card_btn_sprite)
-            self._card_name_text.draw()
-            self._card_mood_text.draw()
-            self._card_state_text.draw()
-            self._card_btn_text.draw()
+            arcade.draw_sprite(self._card_btn_sprite_text)
+            for sp in self._card_text_sprites:
+                arcade.draw_sprite(sp)
 
     # ------------------------------------------------------------------
     # Context menu
@@ -745,7 +736,18 @@ class CampusView(arcade.View):
         # Nudge menu left/up if it would go off-screen
         mx = min(sx, self.window.width  - self._MENU_W - 4)
         my = min(sy, self.window.height - len(items) * self._ITEM_H - self._MENU_PAD * 2 - 4)
-        return {"x": mx, "y": my, "target": b, "items": items}
+
+        # Pre-build Text objects for menu labels (avoids draw_text per frame)
+        from src.ui.font import FONT_NAME
+        text_objs = []
+        for i, (label, _) in enumerate(items):
+            text_y = my + self._MENU_PAD + i * self._ITEM_H + 6
+            text_objs.append(arcade.Text(
+                label, mx + 10, text_y,
+                color=arcade.color.WHITE, font_size=11, font_name=FONT_NAME,
+            ))
+
+        return {"x": mx, "y": my, "target": b, "items": items, "texts": text_objs}
 
     def _context_menu_item_at(self, sx: int, sy: int) -> int | None:
         """Return the index of the menu item under (sx, sy), or None."""
@@ -778,18 +780,13 @@ class CampusView(arcade.View):
                 mx, mx + self._MENU_W, my, my + total_h,
                 (100, 100, 140, 200), border_width=1,
             )
-            # Items
-            for i, (label, _) in enumerate(items):
-                text_y = my + self._MENU_PAD + i * self._ITEM_H + 6
-                arcade.draw_text(
-                    label, mx + 10, text_y,
-                    arcade.color.WHITE, font_size=11,
-                )
+            # Items (pre-built Text objects)
+            for text_obj in self._context_menu.get("texts", []):
+                text_obj.draw()
 
     def _draw_student_labels(self) -> None:
         for sid in self._student_sprites:
             self._name_labels[sid].draw()
-            self._mood_labels[sid].draw()
 
     # ------------------------------------------------------------------
     # Input
