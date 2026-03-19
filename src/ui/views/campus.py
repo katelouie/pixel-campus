@@ -440,9 +440,13 @@ class CampusView(arcade.View):
             sheet_num = CHARACTER_SHEET_NUMS[i % len(CHARACTER_SHEET_NUMS)]
             sprite = StudentSprite(student, char_textures[sheet_num])
 
-            sx, sy = self._spawn_points[i % len(self._spawn_points)]
-            sprite.center_x = sx + random.uniform(-12, 12)
-            sprite.center_y = sy + random.uniform(-8, 8)
+            # Spread students across spawn points; distribute in a circle if few spawn points
+            sp = self._spawn_points[i % len(self._spawn_points)]
+            n = len(self._state.students)
+            angle = (2 * 3.14159 * i) / max(n, 1)
+            radius = 30 + (i // len(self._spawn_points)) * 20
+            sprite.center_x = sp[0] + radius * math.cos(angle) + random.uniform(-6, 6)
+            sprite.center_y = sp[1] + radius * math.sin(angle) + random.uniform(-4, 4)
 
             self._student_sprites[student.student_id] = sprite
             self._sprite_list.append(sprite)
@@ -463,8 +467,29 @@ class CampusView(arcade.View):
     # Game loop
     # ------------------------------------------------------------------
 
+    # Soft separation: prevent students from overlapping
+    _SEPARATION_DIST = 28.0   # start pushing apart below this distance
+    _SEPARATION_FORCE = 1.2   # pixels per frame of push
+
     def on_update(self, delta_time: float) -> None:
         self._scene.update_animation(delta_time)
+
+        # Soft separation — push overlapping students apart gently
+        sprites = list(self._student_sprites.values())
+        for i, a in enumerate(sprites):
+            for b in sprites[i + 1:]:
+                dx = a.center_x - b.center_x
+                dy = a.center_y - b.center_y
+                dist = math.sqrt(dx * dx + dy * dy) or 0.1
+                if dist < self._SEPARATION_DIST:
+                    # Normalize and push apart (only if both are not sitting)
+                    if not a.is_stationed and not b.is_stationed:
+                        push = self._SEPARATION_FORCE * (1.0 - dist / self._SEPARATION_DIST)
+                        nx, ny = dx / dist, dy / dist
+                        a.center_x += nx * push
+                        a.center_y += ny * push
+                        b.center_x -= nx * push
+                        b.center_y -= ny * push
 
         for sid, sprite in self._student_sprites.items():
             sprite.update_movement()

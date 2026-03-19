@@ -281,7 +281,17 @@ def _process_resting(student: Student) -> list[str]:
 
 
 def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
-    """A student decides to do something on their own based on their most depleted need."""
+    """A student decides where to go based on needs + social pull.
+
+    Each room is scored by:
+    1. Need satisfaction — does this room's skill match my lowest needs?
+    2. Social pull — are my friends, crush, or partner here?
+
+    The highest-scoring room wins. This creates organic clique formation
+    (friends drift toward each other) and crush-seeking (drama intensifies).
+    """
+    from .models import FriendshipLevel, RomanceLevel
+
     log: list[str] = []
 
     # Rest if REST need is critically low
@@ -291,29 +301,104 @@ def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
         log.append(f"{student.name} is tired and sits down to rest.")
         return log
 
-    # Find the most depleted need (weighted by preference for variety)
-    lowest_need = min(
-        student.needs.values(),
-        key=lambda n: n.value,
-    )
+    sid = student.student_id
 
-    # Find a room that satisfies this need
-    target_skills = NEED_TO_SKILLS.get(lowest_need.need_type)
-    if target_skills:
-        matching_rooms = [
-            r for r in state.rooms if r.skill_boost in target_skills
-        ]
-        if matching_rooms:
-            room = random.choice(matching_rooms)
-            send_to_room(student, room)
-            log.append(
-                f"{student.name} decides to head to the {room.name} "
-                f"({lowest_need.need_type.value} is low)."
-            )
-            return log
+    # ── Score each room ──────────────────────────────────────────
 
-    # Fallback: pick a random room
-    room = random.choice(state.rooms)
-    send_to_room(student, room)
-    log.append(f"{student.name} wanders toward the {room.name}.")
+    # Need scores: which needs are low and which rooms satisfy them
+    sorted_needs = sorted(student.needs.values(), key=lambda n: n.value)
+    lowest_need = sorted_needs[0]
+
+    # Build a set of "desirable" skills from the bottom 3 needs
+    desirable_skills: set[Skill] = set()
+    for need in sorted_needs[:3]:
+        skills = NEED_TO_SKILLS.get(need.need_type)
+        if skills:
+            desirable_skills.update(skills)
+
+    # Pre-compute who is in each room
+    students_in_room: dict[str, list[Student]] = {}
+    for s in state.students:
+        if s.student_id != sid and s.location is not None:
+            students_in_room.setdefault(s.location.name, []).append(s)
+
+    # Social pull scores per room
+    _SOCIAL_SCORES = {
+        FriendshipLevel.BEST_FRIEND: 15,
+        FriendshipLevel.CLOSE_FRIEND: 10,
+        FriendshipLevel.FRIEND: 5,
+    }
+
+    room_scores: dict[str, float] = {}
+    room_reasons: dict[str, str] = {}  # for log messages
+
+    for room in state.rooms:
+        score = 0.0
+        reason = ""
+
+        # Need satisfaction score
+        if room.skill_boost in desirable_skills:
+            # Higher score if it matches the LOWEST need specifically
+            primary_skills = NEED_TO_SKILLS.get(lowest_need.need_type, [])
+            if room.skill_boost in primary_skills:
+                score += 20.0  # primary need match
+            else:
+                score += 10.0  # secondary need match
+            reason = f"{lowest_need.need_type.value} is low"
+
+        # Social pull: check who's in this room
+        occupants = students_in_room.get(room.name, [])
+        social_bonus = 0.0
+        social_reason = ""
+
+        for other in occupants:
+            key = (min(sid, other.student_id), max(sid, other.student_id))
+
+            # Friendship pull
+            fri = state.friendships.get(key)
+            if fri:
+                bonus = _SOCIAL_SCORES.get(fri.level, 0)
+                if bonus > social_bonus:
+                    social_bonus = bonus
+                    social_reason = f"{other.name} is there"
+
+            # Crush/dating pull (stronger than friendship)
+            rom = state.romances.get(key)
+            if rom:
+                my_feelings = rom.feelings_of(sid)
+                if my_feelings == RomanceLevel.DATING:
+                    social_bonus = max(social_bonus, 20.0)
+                    social_reason = f"{other.name} is there"
+                elif my_feelings == RomanceLevel.CRUSH:
+                    social_bonus = max(social_bonus, 12.0)
+                    social_reason = f"{other.name} is there"
+
+        score += social_bonus
+
+        # Small random jitter to prevent deterministic lock-in
+        score += random.uniform(0, 3.0)
+
+        room_scores[room.name] = score
+        if social_reason and social_bonus > 5:
+            room_reasons[room.name] = social_reason
+        elif reason:
+            room_reasons[room.name] = reason
+
+    # ── Pick the best room ───────────────────────────────────────
+
+    if room_scores:
+        best_room_name = max(room_scores, key=room_scores.get)
+        best_room = next(r for r in state.rooms if r.name == best_room_name)
+        reason = room_reasons.get(best_room_name, "")
+
+        send_to_room(student, best_room)
+        if reason:
+            log.append(f"{student.name} heads to the {best_room.name} ({reason}).")
+        else:
+            log.append(f"{student.name} wanders toward the {best_room.name}.")
+    else:
+        room = random.choice(state.rooms)
+        send_to_room(student, room)
+        log.append(f"{student.name} wanders toward the {room.name}.")
+
     return log
