@@ -1,11 +1,11 @@
 """Student profile view -- full detail panel for a selected student.
 
 Shows portrait, identity, needs, skills, grades, personality preferences,
-recent thoughts, and journal entries. A second tab shows all relationships.
+recent thoughts, and a scrollable journal. A second tab shows all relationships.
 ESC returns to campus view.
 
-All text is built into arcade.Text objects once in on_show_view so that
-on_draw never calls the slow arcade.draw_text() path.
+The journal is the primary interface — it occupies the right 2/3 of the panel
+and is scrollable via mouse wheel. Stats live in a compact left sidebar.
 """
 
 from pathlib import Path
@@ -24,23 +24,25 @@ _PAPERNOTE = (
     / "assets/packs/Complete_UI_Essential_Pack_v2.4/11_Papernote_Theme/Sprites"
 )
 _CLOSE_BTN_PATH = str(_PAPERNOTE / "UI_Papernote_Button01.png")
-_CLOSE_BTN_SIZE = 28   # render size (Button01 is 32px, scale down slightly)
+_CLOSE_BTN_SIZE = 28
 
 _PANEL_W = 1020
 _PANEL_H = 620
-_BORDER  = 36   # nine-slice border + inner padding
-_TAB_H   = 26   # tab strip height at top of inner area
+_BORDER  = 36
+_TAB_H   = 26
 
-# Column x-offsets from inner_left (profile tab)
-_COL1_W = 180
-_COL2_X = _COL1_W + 20
-_COL2_W = 280
-_COL3_X = _COL2_X + _COL2_W + 20
-_COL3_W = 270
+# Layout: left sidebar for stats, right area for journal
+_SIDEBAR_W = 340
+_JOURNAL_X = _SIDEBAR_W + 20   # journal starts after sidebar + gap
+_JOURNAL_W = _PANEL_W - _BORDER * 2 - _JOURNAL_X  # fills remaining width
 
-_BAR_W  = 170
-_BAR_H  = 11
-_BAR_SPACING = 20
+# Sidebar sub-columns for needs+grades side by side
+_NEEDS_W   = 170
+_GRADES_X  = _NEEDS_W + 10
+
+_BAR_W  = 80
+_BAR_H  = 9
+_BAR_SPACING = 16
 
 _LABEL_COLOR  = (40,  30,  20,  255)
 _DIM_COLOR    = (80,  70,  55,  200)
@@ -48,6 +50,9 @@ _HEADER_COLOR = (30,  20,  10,  255)
 _BAR_BG       = (190, 180, 165, 200)
 _TAB_ACTIVE_BG = (220, 210, 190, 220)
 _TAB_INACTIVE  = (120, 110,  90, 160)
+_JOURNAL_TIMESTAMP = (110, 90, 65, 200)
+_JOURNAL_TEXT      = (45, 35, 25, 255)
+_SCROLL_HINT       = (140, 120, 90, 160)
 
 _NEED_COLORS: dict[NeedType, tuple] = {
     NeedType.REST:       ( 70, 130, 180, 255),
@@ -82,6 +87,9 @@ _ROMANCE_COLORS: dict[RomanceLevel, tuple] = {
     RomanceLevel.DATING:   (210,  50,  90, 255),
 }
 
+# Journal entry height (timestamp line + text line + spacing)
+_JOURNAL_ENTRY_H = 38
+
 
 def _fmt(value: str) -> str:
     return value.replace("_", " ").replace("r and b", "R&B").title()
@@ -113,14 +121,23 @@ class ProfileView(arcade.View):
         self._panel_bottom = 0
 
         # Tab state
-        self._active_tab: str = "profile"  # "profile" | "relationships"
-        self._tab_rects: dict[str, tuple] = {}  # name → (x1, y1, x2, y2)
-        self._tab_labels: dict[str, list[arcade.Text]] = {}  # name → [active_text, inactive_text]
+        self._active_tab: str = "profile"
+        self._tab_rects: dict[str, tuple] = {}
+        self._tab_labels: dict[str, list[arcade.Text]] = {}
 
-        # Profile tab render data
+        # Profile tab render data (sidebar)
         self._texts:     list[arcade.Text] = []
-        self._bar_rects: list[tuple]       = []  # (x1, x2, y1, y2, color)
-        self._lines:     list[tuple]       = []  # (x1, y1, x2, y2, color)
+        self._bar_rects: list[tuple]       = []
+        self._lines:     list[tuple]       = []
+
+        # Journal render data (rebuilt on scroll)
+        self._journal_texts: list[arcade.Text] = []
+        self._journal_lines: list[tuple]       = []
+        self._journal_scroll: int = 0  # 0 = newest entries visible at top
+        self._journal_max_scroll: int = 0
+        self._journal_area_top: float = 0
+        self._journal_area_bottom: float = 0
+        self._journal_area_left: float = 0
 
         # Relationships tab render data
         self._rel_texts:     list[arcade.Text] = []
@@ -145,12 +162,12 @@ class ProfileView(arcade.View):
         self._panel_sprite.center_x = self._panel_left   + _PANEL_W // 2
         self._panel_sprite.center_y = self._panel_bottom + _PANEL_H // 2
 
-        # Portrait — shifted down by tab strip height
+        # Portrait
         self._portrait_sprite = arcade.Sprite(self._portrait_tex, scale=1.5)
-        self._portrait_sprite.center_x = il + _COL1_W // 2
-        self._portrait_sprite.center_y = it - _TAB_H - 72
+        self._portrait_sprite.center_x = il + 48
+        self._portrait_sprite.center_y = it - _TAB_H - 48
 
-        # Close button — top-right corner
+        # Close button
         btn_cx = self._panel_left + _PANEL_W - 20
         btn_cy = self._panel_bottom + _PANEL_H - 20
         self._close_btn = arcade.Sprite(
@@ -167,7 +184,7 @@ class ProfileView(arcade.View):
             anchor_x="center", anchor_y="center",
         )
 
-        # Build tab click regions and pre-built label Text objects
+        # Tab strip
         tab_y_center = it - _TAB_H // 2
         tab_w = 110
         tab_x = il
@@ -176,19 +193,27 @@ class ProfileView(arcade.View):
             self._tab_rects[name] = (tab_x, tab_y_center - 10, tab_x + tab_w, tab_y_center + 10)
             cx = tab_x + tab_w // 2
             self._tab_labels[name] = [
-                arcade.Text(display[name], cx, tab_y_center,  # active: dark + bold
+                arcade.Text(display[name], cx, tab_y_center,
                             color=_HEADER_COLOR, font_size=8, bold=True,
                             anchor_x="center", anchor_y="center"),
-                arcade.Text(display[name], cx, tab_y_center,  # inactive: dim
+                arcade.Text(display[name], cx, tab_y_center,
                             color=_TAB_INACTIVE, font_size=8, bold=False,
                             anchor_x="center", anchor_y="center"),
             ]
             tab_x += tab_w + 8
 
+        # Store journal area bounds for scroll rebuilds
+        ct = it - _TAB_H
+        ib = self._panel_bottom + _BORDER
+        self._journal_area_top = ct - 4
+        self._journal_area_bottom = ib + 8
+        self._journal_area_left = il + _JOURNAL_X
+
         # Build content
         self._texts.clear();     self._bar_rects.clear();     self._lines.clear()
         self._rel_texts.clear(); self._rel_bar_rects.clear(); self._rel_lines.clear()
-        self._build_profile_tab(il, it)
+        self._build_sidebar(il, it)
+        self._rebuild_journal()
         self._build_relationships_tab(il, it)
 
     def on_draw(self) -> None:
@@ -211,6 +236,11 @@ class ProfileView(arcade.View):
                 for x1, y1, x2, y2, color in self._lines:
                     arcade.draw_line(x1, y1, x2, y2, color, 1)
                 for t in self._texts:
+                    t.draw()
+                # Journal (separate list, rebuilt on scroll)
+                for x1, y1, x2, y2, color in self._journal_lines:
+                    arcade.draw_line(x1, y1, x2, y2, color, 1)
+                for t in self._journal_texts:
                     t.draw()
             else:
                 for x1, x2, y1, y2, color in self._rel_bar_rects:
@@ -237,157 +267,199 @@ class ProfileView(arcade.View):
             self.window.show_view(self._return_view)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        # Close button
         x1, y1, x2, y2 = self._close_rect
         if x1 <= x <= x2 and y1 <= y <= y2:
             self.window.show_view(self._return_view)
             return
-        # Tab clicks
         for name, (tx1, ty1, tx2, ty2) in self._tab_rects.items():
             if tx1 <= x <= tx2 and ty1 <= y <= ty2:
                 self._active_tab = name
                 return
 
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
+        """Scroll journal entries. scroll_y > 0 = scroll up (older), < 0 = scroll down (newer)."""
+        if self._active_tab != "profile":
+            return
+        old = self._journal_scroll
+        self._journal_scroll = max(0, min(self._journal_max_scroll,
+                                          self._journal_scroll - int(scroll_y)))
+        if self._journal_scroll != old:
+            self._rebuild_journal()
+
     # ------------------------------------------------------------------
-    # Profile tab build
+    # Sidebar (left column: portrait, identity, traits, needs, grades, thoughts)
     # ------------------------------------------------------------------
 
-    def _build_profile_tab(self, il: float, it: float) -> None:
+    def _build_sidebar(self, il: float, it: float) -> None:
         ib = self._panel_bottom + _BORDER
-        ct = it - _TAB_H  # content top, below tab strip
+        ct = it - _TAB_H
 
         self._build_identity(il, ct)
-        self._build_traits(il, ct - 144 - 14 - 5 * 16 - 20)
-        self._build_needs(il + _COL2_X, ct)
-        self._build_skills(il + _COL2_X, ct - 22 - 6 * _BAR_SPACING - 20)
-        self._build_grades(il + _COL3_X, ct)
-        self._build_personality(il + _COL3_X, ct - 22 - 6 * 18 - 16)
-        self._build_journal_and_thoughts(il, ib)
+        self._build_traits(il, ct - 110)
+        self._build_needs_and_grades(il, ct - 220)
+        self._build_thoughts(il, ib)
 
     def _build_identity(self, il: float, it: float) -> None:
         s  = self._student
-        cx = il + _COL1_W // 2
-        y  = it - 144 - 14
+        x  = il + 100  # right of portrait
+        y  = it - 10
 
-        self._add_text(s.name, cx, y, _HEADER_COLOR, font_size=13, bold=True,
-                       anchor_x="center", anchor_y="center")
+        self._add_text(s.name, x, y, _HEADER_COLOR, font_size=13, bold=True,
+                       anchor_y="top")
         y -= 20
 
         meta = [
-            f"{s.year.value.capitalize()} · Age {s.age}",
+            f"{s.year.value.capitalize()} · Age {s.age} · {s.gender.value.replace('_', ' ').title()}",
             s.personality.zodiac.value.capitalize() if s.personality else "—",
-            s.gender.value.replace("_", " ").title(),
-            f"{s.mood.icon} {s.mood.name.capitalize()}",
-            f"State: {s.state.value.capitalize()}",
+            f"{s.mood.icon} {s.mood.name.capitalize()} ({int(s.mood_value)})",
         ]
         for line in meta:
-            self._add_text(line, cx, y, _LABEL_COLOR, font_size=9,
-                           anchor_x="center", anchor_y="center")
-            y -= 16
+            self._add_text(line, x, y, _LABEL_COLOR, font_size=8, anchor_y="top")
+            y -= 14
+
+        # Traits inline
+        if s.traits:
+            trait_str = " · ".join(t.name for t in s.traits)
+            self._add_text(trait_str, x, y, _DIM_COLOR, font_size=8, anchor_y="top")
 
     def _build_traits(self, il: float, top: float) -> None:
         traits = self._student.traits
         if not traits:
             return
-        self._section_header(il, top, "TRAITS")
-        y = top - 22
+        y = top
         for trait in traits:
-            self._add_text(f"• {trait.name}", il, y, _LABEL_COLOR, font_size=9, anchor_y="center")
-            y -= 14
             if trait.description:
-                self._add_text(trait.description, il + 10, y, _DIM_COLOR, font_size=7,
-                               anchor_y="center", width=_COL1_W - 10, multiline=True)
-                y -= 14
+                self._add_text(f"{trait.name}: {trait.description}", il, y, _DIM_COLOR,
+                               font_size=7, anchor_y="top", width=_SIDEBAR_W, multiline=True)
+                y -= 22
 
-    def _build_needs(self, x: float, top: float) -> None:
-        self._section_header(x, top, "NEEDS")
-        y = top - 22
-        for need_type, color in _NEED_COLORS.items():
-            self._bar(x, y, need_type.value.capitalize(),
-                      self._student.needs[need_type].value, color)
-            y -= _BAR_SPACING
-
-    def _build_skills(self, x: float, top: float) -> None:
-        self._section_header(x, top, "SKILLS")
-        y = top - 22
-        for skill in Skill:
-            self._bar(x, y, skill.value.capitalize(),
-                      self._student.skills.get(skill, 0.0), _SKILL_COLOR)
-            y -= _BAR_SPACING
-
-    def _build_grades(self, x: float, top: float) -> None:
-        self._section_header(x, top, "GRADES")
-        y = top - 22
-        for subj in Subject:
-            if subj not in self._student.grades:
-                continue
-            grade  = self._student.grades[subj]
-            letter = grade.letter_full
-            color  = _GRADE_COLORS.get(letter[0], _LABEL_COLOR)
-            self._add_text(f"{subj.value.capitalize():<14}", x, y, _LABEL_COLOR,
-                           font_size=9, anchor_y="center")
-            self._add_text(letter, x + 130, y, color,
-                           font_size=10, bold=True, anchor_y="center")
-            self._add_text(f"{grade.value:.0f}", x + 155, y, _DIM_COLOR,
-                           font_size=8, anchor_y="center")
-            y -= 18
-
-    def _build_personality(self, x: float, top: float) -> None:
-        if not self._student.personality:
-            return
-        p = self._student.personality
-        self._section_header(x, top, "PERSONALITY")
-        y = top - 22
-        prefs = [
-            ("Music",   _fmt(p.music_genre.value)),
-            ("Movies",  _fmt(p.movie_genre.value)),
-            ("Views",   _fmt(p.worldview.value)),
-            ("Time",    _fmt(p.time_of_day.value)),
-            ("Weather", _fmt(p.weather.value)),
-            ("Romance", fmt_romance_interests(p.romance_interest)),
-        ]
-        for label, value in prefs:
-            self._add_text(f"{label}:", x, y, _DIM_COLOR, font_size=8, anchor_y="center")
-            self._add_text(value, x + 60, y, _LABEL_COLOR, font_size=9, anchor_y="center")
-            y -= 17
-
-    def _build_journal_and_thoughts(self, il: float, ib: float) -> None:
+    def _build_needs_and_grades(self, il: float, top: float) -> None:
         s = self._student
 
-        thoughts_top = ib + 110
-        self._section_header(il, thoughts_top, "THOUGHTS")
-        y = thoughts_top - 20
+        # Needs (left sub-column)
+        self._section_header(il, top, "NEEDS")
+        y = top - 18
+        for need_type, color in _NEED_COLORS.items():
+            self._compact_bar(il, y, need_type.value[:4].upper(),
+                              s.needs[need_type].value, color)
+            y -= _BAR_SPACING
+
+        # Grades (right sub-column, same top)
+        gx = il + _GRADES_X
+        self._section_header(gx, top, "GRADES")
+        gy = top - 18
+        for subj in Subject:
+            if subj not in s.grades:
+                continue
+            grade  = s.grades[subj]
+            letter = grade.letter_full
+            color  = _GRADE_COLORS.get(letter[0], _LABEL_COLOR)
+            self._add_text(f"{subj.value[:6].capitalize()}", gx, gy, _DIM_COLOR,
+                           font_size=8, anchor_y="center")
+            self._add_text(letter, gx + 55, gy, color,
+                           font_size=9, bold=True, anchor_y="center")
+            gy -= 15
+
+    def _build_thoughts(self, il: float, ib: float) -> None:
+        s = self._student
+        top = ib + 90
+        self._section_header(il, top, "THOUGHTS")
+        y = top - 18
         shown = 0
         for thought in reversed(s.thoughts):
-            if shown >= 6:
+            if shown >= 4:
                 break
             sign = "+" if thought.mood_effect >= 0 else ""
-            self._add_text(f"{sign}{thought.mood_effect:.0f}  {thought.label}",
-                           il, y, _LABEL_COLOR, font_size=8, anchor_y="center")
-            y -= 14
+            label = thought.label
+            if len(label) > 45:
+                label = label[:42] + "..."
+            self._add_text(f"{sign}{thought.mood_effect:.0f}  {label}",
+                           il, y, _LABEL_COLOR, font_size=7, anchor_y="center")
+            y -= 13
             shown += 1
         if not s.thoughts:
             self._add_text("Nothing on their mind.", il, y, _DIM_COLOR,
-                           font_size=8, anchor_y="center")
+                           font_size=7, anchor_y="center")
 
-        jx = il + _COL2_X
-        journal_top = ib + 110
-        self._section_header(jx, journal_top, "JOURNAL")
-        y = journal_top - 20
-        entries = s.journal[-6:]
-        if entries:
-            for entry in reversed(entries):
-                header = f"Day {entry.day} — {entry.period_label}"
-                self._add_text(header, jx, y, _DIM_COLOR,
-                               font_size=7, anchor_y="center")
-                y -= 13
-                self._add_text(entry.text, jx, y, _LABEL_COLOR,
-                               font_size=8, anchor_y="center",
-                               width=_COL2_W + 20 + _COL3_W, multiline=True)
-                y -= 22
-        else:
-            self._add_text("No journal entries yet.", jx, y, _DIM_COLOR,
-                           font_size=8, anchor_y="center")
+    # ------------------------------------------------------------------
+    # Journal (right panel, scrollable)
+    # ------------------------------------------------------------------
+
+    def _rebuild_journal(self) -> None:
+        """Rebuild visible journal Text objects based on current scroll offset."""
+        self._journal_texts.clear()
+        self._journal_lines.clear()
+
+        s = self._student
+        jx = self._journal_area_left
+        jw = _JOURNAL_W
+        top = self._journal_area_top
+        bottom = self._journal_area_bottom
+        available_h = top - bottom
+
+        # Header
+        self._journal_texts.append(arcade.Text(
+            "JOURNAL", jx, top, color=_HEADER_COLOR,
+            font_size=10, bold=True, anchor_y="top",
+        ))
+        self._journal_lines.append((jx, top - 14, jx + jw, top - 14, (140, 120, 90, 180)))
+
+        content_top = top - 20
+        content_h = content_top - bottom
+
+        # How many entries can fit?
+        visible_count = max(1, int(content_h / _JOURNAL_ENTRY_H))
+
+        # Entries are newest-first
+        entries = list(reversed(s.journal))
+        total = len(entries)
+        self._journal_max_scroll = max(0, total - visible_count)
+
+        if not entries:
+            self._journal_texts.append(arcade.Text(
+                "No journal entries yet.", jx, content_top - 10,
+                color=_DIM_COLOR, font_size=9, anchor_y="top",
+            ))
+            return
+
+        # Slice visible entries based on scroll
+        start = self._journal_scroll
+        end = min(start + visible_count, total)
+        visible = entries[start:end]
+
+        y = content_top
+        for entry in visible:
+            # Timestamp line
+            timestamp = f"Day {entry.day} — {entry.time_label}"
+            self._journal_texts.append(arcade.Text(
+                timestamp, jx, y, color=_JOURNAL_TIMESTAMP,
+                font_size=7, anchor_y="top",
+            ))
+            y -= 12
+
+            # Entry text (word-wrapped)
+            text = entry.text
+            self._journal_texts.append(arcade.Text(
+                text, jx, y, color=_JOURNAL_TEXT,
+                font_size=8, anchor_y="top",
+                width=jw, multiline=True,
+            ))
+            y -= 24  # base entry text height
+
+            # Light separator
+            y -= 2
+
+        # Scroll hints
+        if self._journal_scroll > 0:
+            self._journal_texts.append(arcade.Text(
+                "▲ newer", jx + jw - 50, top - 6,
+                color=_SCROLL_HINT, font_size=7, anchor_y="top",
+            ))
+        if self._journal_scroll < self._journal_max_scroll:
+            self._journal_texts.append(arcade.Text(
+                "▼ older", jx + jw - 50, bottom + 2,
+                color=_SCROLL_HINT, font_size=7, anchor_y="bottom",
+            ))
 
     # ------------------------------------------------------------------
     # Relationships tab build
@@ -395,23 +467,20 @@ class ProfileView(arcade.View):
 
     def _build_relationships_tab(self, il: float, it: float) -> None:
         s   = self._student
-        ct  = it - _TAB_H - 8  # content top, a little padding below tab strip
+        ct  = it - _TAB_H - 8
         ib  = self._panel_bottom + _BORDER
         sid = s.student_id
 
-        # Column layout (full inner width)
-        inner_w = _COL1_W + 20 + _COL2_W + 20 + _COL3_W  # ~590
+        inner_w = _PANEL_W - _BORDER * 2
         col_name   = il
         col_friend = il + 145
-        col_rom_me = il + 330   # my feelings → them
-        col_rom_them = il + 460 # their feelings → me
-        col_status = il + 590   # mutual status label
+        col_rom_me = il + 330
+        col_rom_them = il + 460
+        col_status = il + 590
 
-        # Section header
         self._rel_section_header(il, ct, "RELATIONSHIPS")
         y = ct - 22
 
-        # Column headers
         for text, x in (
             ("NAME",        col_name),
             ("FRIENDSHIP",  col_friend),
@@ -421,11 +490,9 @@ class ProfileView(arcade.View):
         ):
             self._add_rel_text(text, x, y, _DIM_COLOR, font_size=7, bold=True)
         y -= 4
-        # Header underline
         self._rel_lines.append((il, y, il + inner_w, y, (140, 120, 90, 140)))
         y -= 12
 
-        # Build sorted student list: dating first, then crush, then by friendship level desc
         others = [st for st in self._state.students if st.student_id != sid]
 
         def _sort_key(other: Student) -> tuple:
@@ -457,10 +524,8 @@ class ProfileView(arcade.View):
             fri_affinity = fri.affinity if fri else 0
             fri_color   = _FRIENDSHIP_COLORS.get(fri_level, _DIM_COLOR)
 
-            # Name
             self._add_rel_text(other.name, col_name, y, _LABEL_COLOR, font_size=9)
 
-            # Friendship level + mini affinity bar
             fri_label = fri_level.name.replace("_", " ").title()
             self._add_rel_text(fri_label, col_friend, y, fri_color, font_size=8)
             bar_x = col_friend + 90
@@ -470,7 +535,6 @@ class ProfileView(arcade.View):
             if fill > 0:
                 self._rel_bar_rects.append((bar_x, bar_x + fill, y - 4, y + 4, fri_color))
 
-            # Romance columns
             if rom:
                 my_feelings   = rom.feelings_of(sid)
                 their_feelings = rom.feelings_of(other.student_id)
@@ -487,7 +551,6 @@ class ProfileView(arcade.View):
                         their_feelings.name.title(), col_rom_them, y, their_color, font_size=8
                     )
 
-                # Status label
                 if rom.is_dating:
                     self._add_rel_text("Dating!", col_status, y, (210, 50, 90, 255), font_size=8, bold=True)
                 elif rom.is_mutual_crush:
@@ -503,7 +566,7 @@ class ProfileView(arcade.View):
             self._add_rel_text("No other students.", il, y, _DIM_COLOR, font_size=8)
 
     # ------------------------------------------------------------------
-    # Build helpers (profile tab)
+    # Build helpers (sidebar)
     # ------------------------------------------------------------------
 
     def _add_text(self, text: str, x: float, y: float, color: tuple,
@@ -518,21 +581,22 @@ class ProfileView(arcade.View):
         self._texts.append(arcade.Text(text, x, y, **kwargs))
 
     def _section_header(self, x: float, y: float, text: str) -> None:
-        self._add_text(text, x, y, _HEADER_COLOR, font_size=9, bold=True, anchor_y="top")
-        self._lines.append((x, y - 13, x + _BAR_W, y - 13, (140, 120, 90, 180)))
+        self._add_text(text, x, y, _HEADER_COLOR, font_size=8, bold=True, anchor_y="top")
+        self._lines.append((x, y - 11, x + 140, y - 11, (140, 120, 90, 180)))
 
-    def _bar(self, x: float, y: float, label: str, value: float, color: tuple) -> None:
-        LABEL_W = 82
-        GAP     = 5
-        bar_x   = x + LABEL_W + GAP
-        self._add_text(label, bar_x - GAP, y, _DIM_COLOR, font_size=8,
+    def _compact_bar(self, x: float, y: float, label: str, value: float, color: tuple) -> None:
+        """Compact bar: short label + thin bar + value number."""
+        LABEL_W = 35
+        GAP = 3
+        bar_x = x + LABEL_W + GAP
+        self._add_text(label, bar_x - GAP, y, _DIM_COLOR, font_size=7,
                        anchor_x="right", anchor_y="center")
         self._bar_rects.append((bar_x, bar_x + _BAR_W, y - _BAR_H // 2, y + _BAR_H // 2, _BAR_BG))
         fill = int(_BAR_W * max(0.0, min(100.0, value)) / 100.0)
         if fill > 0:
             self._bar_rects.append((bar_x, bar_x + fill, y - _BAR_H // 2, y + _BAR_H // 2, color))
         self._add_text(f"{int(value)}", bar_x + _BAR_W + GAP + 2, y, _DIM_COLOR,
-                       font_size=8, anchor_y="center")
+                       font_size=7, anchor_y="center")
 
     # ------------------------------------------------------------------
     # Build helpers (relationships tab)
@@ -547,5 +611,5 @@ class ProfileView(arcade.View):
 
     def _rel_section_header(self, x: float, y: float, text: str) -> None:
         self._add_rel_text(text, x, y, _HEADER_COLOR, font_size=9, bold=True)
-        inner_w = _COL1_W + 20 + _COL2_W + 20 + _COL3_W
+        inner_w = _PANEL_W - _BORDER * 2
         self._rel_lines.append((x, y - 13, x + inner_w, y - 13, (140, 120, 90, 180)))
