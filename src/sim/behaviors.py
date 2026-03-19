@@ -291,11 +291,29 @@ def _autonomous_decision(student: Student, state: "GameState") -> list[str]:
     (friends drift toward each other) and crush-seeking (drama intensifies).
     """
     from .models import FriendshipLevel, RomanceLevel
+    from .personality import TimeOfDay
 
     log: list[str] = []
 
-    # Rest if REST need is critically low
-    if student.needs[NeedType.REST].value < 25:
+    # Time-of-day energy: adjust rest threshold based on preferred time
+    # Morning people push through tiredness early, rest easier late
+    # Night owls push through tiredness late, rest easier early
+    rest_threshold = 25  # base
+    if student.personality:
+        tick = state.clock.tick
+        pref = student.personality.time_of_day
+        is_first_half = tick < state.clock.ticks_per_day // 2
+        if pref == TimeOfDay.MORNING and is_first_half:
+            rest_threshold = 15   # morning person + morning → push through
+        elif pref == TimeOfDay.MORNING and not is_first_half:
+            rest_threshold = 35   # morning person + evening → tire easily
+        elif pref in (TimeOfDay.EVENING, TimeOfDay.NIGHT) and not is_first_half:
+            rest_threshold = 15   # night owl + evening → push through
+        elif pref in (TimeOfDay.EVENING, TimeOfDay.NIGHT) and is_first_half:
+            rest_threshold = 35   # night owl + morning → tire easily
+
+    # Rest if REST need is critically low (threshold adjusted by time-of-day preference)
+    if student.needs[NeedType.REST].value < rest_threshold:
         student.state = StudentState.RESTING
         student.activity_ticks_left = random.randint(3, 6)
         log.append(f"{student.name} is tired and sits down to rest.")

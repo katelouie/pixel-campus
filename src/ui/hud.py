@@ -233,8 +233,9 @@ class HUD:
         with self._screen_camera.activate():
             # Top bar + clock
             self._top_bar_list.draw()
+            weather_str = state.current_weather.value.capitalize()
             clock_str = (
-                f"{state.clock.day_time_str}  |  "
+                f"{state.clock.day_time_str}  |  {weather_str}  |  "
                 f"Points: {state.total_points}/{state.graduation_target}"
             )
             clock_tex = self._font.get_texture(clock_str)

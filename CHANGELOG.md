@@ -58,6 +58,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Camera viewport outline shows what part of the map you're currently viewing.
   - Drawn with primitives only (no sprites, no click interference).
 
+- **Time-of-day autonomous behavior** (`behaviors.py`): morning people push through tiredness in the first half of the day (rest threshold 15 vs base 25), tire easily in the evening (threshold 35). Night owls opposite. Creates visible daily rhythms — early-risers active at 8am, night owls dragging until afternoon.
+
+- **Weather display in HUD** (`hud.py`): current weather now shown in the top banner: `Mon 9:35a | Sunny | Points: 0/800`. Weather was already simulated and affecting mood thoughts — now the player can see it.
+
 - **Student separation + spread spawning** (`campus.py`): students no longer overlap.
   - Spawn distribution: students spread in a circle around spawn points (radius 30px, 20px per ring) instead of piling on the same pixel.
   - Soft separation force: every frame, walking students closer than 28px gently push apart (1.2px/frame, scaled by overlap). Sitting students exempt. Boid-style separation — cheap, natural-looking, no hard collision needed.
