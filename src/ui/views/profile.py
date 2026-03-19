@@ -374,10 +374,14 @@ class ProfileView(arcade.View):
         journal_top = ib + 110
         self._section_header(jx, journal_top, "JOURNAL")
         y = journal_top - 20
-        entries = s.journal[-4:]
+        entries = s.journal[-6:]
         if entries:
-            for day, text in reversed(entries):
-                self._add_text(f"Day {day}: {text}", jx, y, _LABEL_COLOR,
+            for entry in reversed(entries):
+                header = f"Day {entry.day} — {entry.period_label}"
+                self._add_text(header, jx, y, _DIM_COLOR,
+                               font_size=7, anchor_y="center")
+                y -= 13
+                self._add_text(entry.text, jx, y, _LABEL_COLOR,
                                font_size=8, anchor_y="center",
                                width=_COL2_W + 20 + _COL3_W, multiline=True)
                 y -= 22

@@ -75,8 +75,8 @@ def show_journal(state: GameState, name: str) -> None:
         print(f"{student.name}'s journal is empty.")
         return
     print(f"{student.name}'s Journal:")
-    for day, entry in student.journal[-5:]:
-        print(f"    Day {day}: {entry}")
+    for entry in student.journal[-8:]:
+        print(f"    Day {entry.day} — {entry.period_label}: {entry.text}")
 
 
 def show_friendships(state: GameState) -> None:

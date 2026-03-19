@@ -94,7 +94,7 @@ def process_student(student: Student, state: "GameState") -> list[str]:
             | StudentState.CREATING
             | StudentState.SOCIALIZING
         ):
-            log.extend(_process_activity(student, bus=state.bus))
+            log.extend(_process_activity(student, state=state))
         case StudentState.CHATTING:
             log.extend(_process_chatting(student, state))
 
@@ -155,8 +155,9 @@ def _process_traveling(student: Student) -> list[str]:
     return log
 
 
-def _process_activity(student: Student, bus: GameEventBus | None = None) -> list[str]:
+def _process_activity(student: Student, state: "GameState | None" = None) -> list[str]:
     """Process 1 tick of an ongoing activity (studying, exercising, etc.)"""
+    bus = state.bus if state is not None else None
     log: list[str] = []
     room = student.location
     if room is None:
@@ -206,6 +207,11 @@ def _process_activity(student: Student, bus: GameEventBus | None = None) -> list
                 student.traits, thought.category, thought.mood_effect
             )
             add_thought(student.thoughts, thought, bus=bus)
+
+        # Journal: activity reflection hook
+        if state is not None and hasattr(state, '_journal_sub') and state._journal_sub is not None:
+            state._journal_sub.on_activity_complete(student, room.skill_boost, room.name)
+
         student.state = StudentState.IDLE
 
     return log

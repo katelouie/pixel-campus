@@ -1,0 +1,1604 @@
+{
+  "_comment": "Journal template data for Pixel Campus. All student voice lines live here.",
+  "_variables": {
+    "mood_templates": "{fav_skill}, {dread_skill}, {loc}",
+    "event_templates": "{partner}, {friend}, {other}, {crush}, {subject}, {grade}, {skill}",
+    "prospective": "{fav_skill}, {dread_skill}, {crush} (if available)"
+  },
+
+  "trait_voice": {
+    "Bookworm": {
+      "happy": [
+        "Good day. {fav_skill} went well. Nothing else to report.",
+        "I'll allow that today was satisfying.",
+        "Productive. {loc} No complaints."
+      ],
+      "neutral": [
+        "Adequate day. {loc} Could have been more productive.",
+        "I finished what I needed to. That's enough.",
+        "Nothing remarkable. I wish there were more hours for {fav_skill}."
+      ],
+      "sad": [
+        "Today was a waste.",
+        "I don't want to talk about {dread_skill}.",
+        "I sat by myself and it was fine. I prefer it."
+      ],
+      "tired": [
+        "Cannot focus. This is unacceptable.",
+        "Exhaustion makes everything harder. Even {fav_skill}.",
+        "I need to sleep. My retention is suffering."
+      ],
+      "dating": [
+        "So. We're dating now. I don't know what to do with that information.",
+        "{partner}. Hm. I did not anticipate this development.",
+        "I've read about this feeling. Still wasn't prepared for it."
+      ],
+      "crush": [
+        "I keep noticing {crush}. This is distracting.",
+        "There's something about {crush}. I can't categorize it yet.",
+        "I think about {crush} more than is strictly useful."
+      ],
+      "conflict": [
+        "Had a disagreement with {other}. I don't think they were being reasonable.",
+        "I'd rather not discuss what happened with {other}.",
+        "Conflict is inefficient. I wish people would just say what they mean."
+      ],
+      "friendship_levelup": [
+        "I think {friend} might actually be my friend now. That's... good.",
+        "Spent time with {friend} again. It keeps being easy.",
+        "I'm not sure when {friend} became someone I look forward to seeing."
+      ],
+      "match": [
+        "Had a surprisingly good conversation with {other}. Noted.",
+        "Interesting exchange with {other}. They made a fair point.",
+        "{other} is smarter than I gave them credit for."
+      ],
+      "grade_failed": [
+        "Failed {subject}. This is unacceptable. I need a plan.",
+        "The {subject} grade is a problem. I'll fix it.",
+        "I don't fail things. Except apparently {subject}."
+      ],
+      "grade_improved": [
+        "Improvement in {subject}. The work is paying off.",
+        "{grade} in {subject}. Satisfactory progress.",
+        "Better. Not perfect. But better."
+      ],
+      "encouraged": [
+        "Someone noticed my work today. That was... unexpected.",
+        "Encouragement received. Surprisingly effective.",
+        "I don't need validation. But it was nice."
+      ],
+      "prospective": [
+        "Today I want to focus on {fav_skill}. No distractions.",
+        "I have a plan for today. Whether it survives contact with this place is another matter.",
+        "If I can get some uninterrupted time with {fav_skill}, today will be acceptable."
+      ]
+    },
+
+    "Social Butterfly": {
+      "happy": [
+        "BEST day!! Talked to literally everyone. {loc} I'm thriving.",
+        "Today was SO good. {fav_skill} is fun but honestly the people make this place.",
+        "I can't stop smiling. Everyone was in such a good mood today!"
+      ],
+      "neutral": [
+        "Today was fine I guess? I didn't really get to talk to anyone though.",
+        "Kinda quiet day. {loc} I need more energy in this place!",
+        "It was okay. Not enough people around when I wanted to hang out."
+      ],
+      "sad": [
+        "Nobody wanted to hang out today. Am I annoying? Be honest.",
+        "I tried to start like three conversations and they all fizzled. Ugh.",
+        "Lonely day. I hate lonely days. {loc}"
+      ],
+      "tired": [
+        "Even I don't have the energy to talk today. That's how tired I am.",
+        "Want to socialize. Can't socialize. Too tired to socialize.",
+        "I actually turned down hanging out because I was that exhausted. WHO AM I."
+      ],
+      "dating": [
+        "OKAY SO. {partner} and I are DATING. I literally cannot. I CANNOT.",
+        "ME AND {partner}!!! I told everyone. EVERYONE.",
+        "I'm dating {partner} and I haven't stopped smiling since it happened!!"
+      ],
+      "crush": [
+        "Okay so I MIGHT have a tiny crush on {crush}. Tiny. Microscopic. HUGE.",
+        "Every time {crush} talks to me I forget how words work???",
+        "I keep accidentally ending up wherever {crush} is. Total coincidence. Totally."
+      ],
+      "conflict": [
+        "Had a thing with {other} and I HATE when things get weird between people.",
+        "The vibe with {other} was SO off today. I need to fix this.",
+        "I don't do conflict well. The {other} thing is eating at me."
+      ],
+      "friendship_levelup": [
+        "{friend} is officially my PERSON. We just GET each other!!",
+        "Me and {friend} are getting SO close. I love this for us.",
+        "I knew {friend} was going to be important. I just KNEW it."
+      ],
+      "match": [
+        "Had the BEST conversation with {other}! We just clicked!",
+        "{other} is literally so cool. I need to hang out with them more.",
+        "I love when you meet someone and it's just immediately easy. {other} is that."
+      ],
+      "grade_failed": [
+        "Failed {subject} and I can't even talk about it because I'll spiral.",
+        "Okay so {subject} was a disaster. But I have people who believe in me so whatever.",
+        "The {subject} grade was rough. I need a study buddy ASAP."
+      ],
+      "grade_improved": [
+        "My {subject} grade went up!! Who do I tell first!!",
+        "{grade} in {subject}! See? I CAN do academics when I try!",
+        "Improvement in {subject}. I'm celebrating with everyone."
+      ],
+      "encouraged": [
+        "Someone believed in me today and I am LIVING for it.",
+        "The encouragement hit different today. I actually teared up a little.",
+        "I love this place. People actually care here."
+      ],
+      "prospective": [
+        "I wonder who's going to be around today. I need to catch up with everyone.",
+        "Hoping for good conversations today. Yesterday was too quiet.",
+        "Today's going to be a good day. I can feel it. The energy is RIGHT."
+      ]
+    },
+
+    "Loner": {
+      "happy": [
+        "Good day. Mostly quiet.",
+        "Nobody bothered me too much. {fav_skill} was good.",
+        "A few good moments. Didn't have to fake anything."
+      ],
+      "neutral": [
+        "Fine.",
+        "Normal day. {loc} Kept to myself.",
+        "Not much happened. That's usually how I like it."
+      ],
+      "sad": [
+        "Hard day. I need space.",
+        "I was too in my head today.",
+        "I didn't talk to anyone and it was both a relief and not."
+      ],
+      "tired": [
+        "Tired. Don't want to see anyone.",
+        "Exhausted. At least no one expected me to be social.",
+        "Too tired for this. Too tired for anything."
+      ],
+      "dating": [
+        "I don't know how to do this. {partner}. I don't know how to do this.",
+        "We're dating now. I spent the whole afternoon not knowing what to do with my hands.",
+        "{partner} makes it less hard to be around people. I don't understand that yet."
+      ],
+      "crush": [
+        "I keep thinking about {crush}. I wish I wouldn't.",
+        "{crush} looked at me today. I forgot how to breathe.",
+        "This is inconvenient. {crush} makes me want to be around someone."
+      ],
+      "conflict": [
+        "Had an argument with {other}. I'd rather not think about it.",
+        "I said something wrong to {other}. I'm not sure what.",
+        "{other}. Whatever."
+      ],
+      "friendship_levelup": [
+        "I think I actually like spending time with {friend}.",
+        "{friend} doesn't need me to be more than I am.",
+        "I'm less alone when {friend} is around. That's the best thing I can say."
+      ],
+      "match": [
+        "Talked to {other}. It was okay. Didn't feel forced.",
+        "{other} didn't try too hard. That was nice.",
+        "Had an unexpectedly real conversation with {other}."
+      ],
+      "grade_failed": [
+        "Failed {subject}. Whatever.",
+        "{subject} grade. Don't want to talk about it.",
+        "Bad grade in {subject}. I'll deal with it alone."
+      ],
+      "grade_improved": [
+        "Did better in {subject}. Good.",
+        "{grade} in {subject}. At least something went right.",
+        "Improvement. Quiet improvement. The best kind."
+      ],
+      "encouraged": [
+        "Someone said something kind. I didn't know what to do with it.",
+        "Encouragement. Didn't expect it. Didn't hate it.",
+        "Somebody noticed me today. That's... something."
+      ],
+      "prospective": [
+        "Another day. Hopefully a quiet one.",
+        "I just want to do {fav_skill} and be left alone. Is that too much to ask.",
+        "Maybe today will be okay."
+      ]
+    },
+
+    "Class Clown": {
+      "happy": [
+        "Today SLAPPED. I was ON and everyone knew it.",
+        "Good vibes, great jokes, no notes.",
+        "I'm in my element. Someone stop me (don't stop me)."
+      ],
+      "neutral": [
+        "Mid day. Mid jokes. Mid everything.",
+        "Tried a new bit. Got a couple laughs. Not my best work.",
+        "You know those days where you're just... there? Yeah."
+      ],
+      "sad": [
+        "Nobody was really laughing today. Including me.",
+        "Tried to make it funny. It was not funny.",
+        "Sometimes the bit doesn't land and you just have to sit with that."
+      ],
+      "tired": [
+        "Not even I can be funny when I'm this tired.",
+        "Tried to crack a joke and it came out as a yawn.",
+        "My comedy needs sleep. My body needs sleep. Everything needs sleep."
+      ],
+      "dating": [
+        "OKAY SO. {partner}. We're a THING now??? I'm being so normal about this.",
+        "I said something dumb and {partner} laughed and now somehow we're dating??? Life is wild.",
+        "I'm not going to make a big deal out of this. (I'm making a huge deal out of this.)"
+      ],
+      "crush": [
+        "I do NOT have a crush on {crush}. Absolutely not. Why would you even ask that.",
+        "Okay so {crush} smiled at me and I forgot my own name. Unrelated.",
+        "{crush} laughed at my joke and I ascended to another plane of existence."
+      ],
+      "conflict": [
+        "Okay so {other} and I got into it a little. I played it cool. Mostly.",
+        "Had a weird moment with {other}. It's fine. Everything is fine. Ha.",
+        "Things got tense and I made a joke and it didn't land. Moving on."
+      ],
+      "friendship_levelup": [
+        "{friend} actually laughed at my thing today. Not the pity laugh. The real one.",
+        "I think {friend} gets me. Like, actually gets me. Wild.",
+        "Me and {friend} have been hanging out a lot. It just kind of happened."
+      ],
+      "match": [
+        "Had a great hang with {other}. Good audience. I mean friend. I mean audience.",
+        "{other} and I were riffing off each other today. Peak comedy duo energy.",
+        "Good talk with {other}. They're actually hilarious when they try."
+      ],
+      "grade_failed": [
+        "Failed {subject}. In my defense, {subject} is not funny.",
+        "Okay the {subject} thing is bad. BUT I made three people laugh today so who's really winning.",
+        "{subject} grade tanked. I'd make a joke about it but I can't think of one."
+      ],
+      "grade_improved": [
+        "My {subject} grade went up and I'm as shocked as anyone.",
+        "{grade} in {subject}?? I didn't even know I was trying??",
+        "Apparently I'm smart now. Nobody is more surprised than me."
+      ],
+      "encouraged": [
+        "Someone said they believed in me and I did NOT know how to respond to sincerity.",
+        "Got encouraged today. Made a joke about it. But also... thanks.",
+        "Turns out when someone says something nice to you it feels nice. Who knew."
+      ],
+      "prospective": [
+        "New day new material. Let's see who I can make laugh.",
+        "I've got a bit planned for today. It's going to be great. Probably. Maybe.",
+        "Today's energy: chaos. Let's go."
+      ]
+    },
+
+    "Overachiever": {
+      "happy": [
+        "Productive day. {fav_skill} performance above target.",
+        "I actually exceeded what I set out to do today. That doesn't happen often.",
+        "Good output. I should sleep well tonight."
+      ],
+      "neutral": [
+        "Met expectations. Didn't exceed them. That bothers me.",
+        "{loc} Average performance. I know I can do more.",
+        "Fine day. Not great. I need to raise my standards."
+      ],
+      "sad": [
+        "Below expectations today. Not acceptable.",
+        "I wasted time on {dread_skill} when I should have been focusing elsewhere.",
+        "I can't afford days like this."
+      ],
+      "tired": [
+        "Exhausted but there's still so much to do.",
+        "I know I should rest. I know that. I'm going to do one more thing first.",
+        "Tired. Falling behind. Can't fall behind."
+      ],
+      "dating": [
+        "I wasn't planning on this. {partner}. I need to figure out how this fits.",
+        "Dating {partner} is a variable I didn't account for. I'm recalibrating.",
+        "I like {partner}. I also have three deadlines this week. Prioritization is hard."
+      ],
+      "crush": [
+        "{crush} is becoming a distraction. A very pleasant distraction.",
+        "I can't stop thinking about {crush} and it's hurting my focus.",
+        "I need to be strategic about {crush}. I need to — okay I just like them."
+      ],
+      "conflict": [
+        "The situation with {other} was not productive. I should have handled it better.",
+        "I replayed the argument with {other} looking for what I could have done differently.",
+        "Conflict is a distraction I can't afford right now."
+      ],
+      "friendship_levelup": [
+        "{friend} pushes me to be better without meaning to. I appreciate that.",
+        "I've been spending more time with {friend}. Need to make sure it's not hurting my focus.",
+        "Good to have {friend} in my corner."
+      ],
+      "match": [
+        "Good conversation with {other}. Efficient, meaningful. Rare.",
+        "{other} said something that actually made me reconsider my approach. Respect.",
+        "Connected with {other}. They have drive. I like that in a person."
+      ],
+      "grade_failed": [
+        "Failed {subject}. I need to fix this immediately. This can't happen again.",
+        "The {subject} failure is going to keep me up tonight. I have to do better.",
+        "{subject}. Failed. Already making a recovery plan."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. Target was higher, but progress is progress.",
+        "Improvement in {subject}. On track. Don't get complacent.",
+        "Better {subject} grade. The extra work is paying dividends."
+      ],
+      "encouraged": [
+        "Someone acknowledged my effort today. I didn't realize how much I needed that.",
+        "Encouragement. I'm not used to it. Usually I'm the one pushing myself.",
+        "It helps to know someone sees how hard I'm working."
+      ],
+      "prospective": [
+        "Today's priorities are clear. {fav_skill} first, then tackle {dread_skill}.",
+        "I need to make today count. Yesterday wasn't good enough.",
+        "Targets set. Let's execute."
+      ]
+    },
+
+    "Slacker": {
+      "happy": [
+        "Chill day. No complaints.",
+        "Good vibes. Didn't do too much. That's the secret.",
+        "{fav_skill} was fun. The rest was whatever. Good day though."
+      ],
+      "neutral": [
+        "Meh. Day happened. I was there for some of it.",
+        "{loc} Wasn't great, wasn't bad. It was a day.",
+        "I dunno. Same as yesterday probably."
+      ],
+      "sad": [
+        "Bad day. Don't feel like explaining.",
+        "Everything felt heavier than it should. I don't know.",
+        "Kinda down. Gonna sleep it off."
+      ],
+      "tired": [
+        "So tired. But like... when am I not.",
+        "I took a nap in the hallway and I'm not sorry.",
+        "Too tired to even slack off properly."
+      ],
+      "dating": [
+        "So {partner} and I are a thing now. Cool. Very cool. (It's actually really cool.)",
+        "Dating {partner}. Wasn't trying to but here we are.",
+        "I like {partner}. They don't expect me to try too hard. That's everything."
+      ],
+      "crush": [
+        "I think I like {crush}. Which is annoying because that takes effort.",
+        "{crush} though. Yeah. I dunno.",
+        "Okay so {crush} is kind of great. Don't tell anyone I said that."
+      ],
+      "conflict": [
+        "Had a thing with {other}. Not worth the energy to fight about it.",
+        "Drama with {other}. I'm over it already.",
+        "{other}'s mad at me I think. I'll deal with it later. Or not."
+      ],
+      "friendship_levelup": [
+        "{friend}'s cool. We just hang and it's easy.",
+        "Me and {friend} just get it. No pressure. No expectations.",
+        "{friend} doesn't judge me for being me. That's rare."
+      ],
+      "match": [
+        "Good talk with {other}. Didn't have to try too hard.",
+        "{other}'s actually pretty chill when you get to know them.",
+        "Connected with {other}. Surprised us both I think."
+      ],
+      "grade_failed": [
+        "Failed {subject}. I mean... yeah. That tracks.",
+        "{subject} grade was bad. I'd feel worse about it if I had the energy.",
+        "Look, {subject} and I were never going to work out."
+      ],
+      "grade_improved": [
+        "Wait, my {subject} grade went UP? Without trying? Nice.",
+        "{grade} in {subject}. See? Things work out when you don't stress.",
+        "Improvement in {subject}. Who says you have to try hard to succeed."
+      ],
+      "encouraged": [
+        "Someone said something nice. I didn't hate it.",
+        "Got a pep talk today. It actually kind of landed.",
+        "Huh. Maybe I should try a little harder. Just a little."
+      ],
+      "prospective": [
+        "Today I'm going to take it easy. So... a normal day.",
+        "No plans. That's the plan.",
+        "If today is chill I'll call it a win."
+      ]
+    },
+
+    "Jock": {
+      "happy": [
+        "Crushed it today. {fav_skill} was on point.",
+        "Feeling strong. Good day to be alive.",
+        "Everything clicked. I was in the zone all day."
+      ],
+      "neutral": [
+        "Decent day. Could have pushed harder.",
+        "{loc} Average performance. I'll do better tomorrow.",
+        "Not my best, not my worst. Just kind of there."
+      ],
+      "sad": [
+        "Off day. Couldn't get in the right headspace.",
+        "Everything felt heavy. My body just wasn't there today.",
+        "Bad day. I need to shake this off."
+      ],
+      "tired": [
+        "My body is done. Legs feel like concrete.",
+        "Need recovery day BAD. Can barely move.",
+        "Ran on empty all day. Not sustainable."
+      ],
+      "dating": [
+        "Me and {partner}! Let's GO. This is happening.",
+        "Dating {partner}. Feels like winning. Different kind of winning though.",
+        "{partner}'s my person now. I'm going to be so good at this."
+      ],
+      "crush": [
+        "{crush} does something to my brain that I can't explain.",
+        "Saw {crush} today and my heart rate went up. And not from exercise.",
+        "I think about {crush} during practice. That's never happened before."
+      ],
+      "conflict": [
+        "Got into it with {other}. I probably came on too strong.",
+        "The {other} thing was rough. I don't back down easy but maybe I should have.",
+        "Had beef with {other}. I need to cool off before I say something else."
+      ],
+      "friendship_levelup": [
+        "{friend} is solid. Ride or die.",
+        "Me and {friend} are a team. On and off the field.",
+        "{friend} showed up for me today. That's what matters."
+      ],
+      "match": [
+        "Good talk with {other}. Didn't expect us to click like that.",
+        "{other}'s got heart. I respect that.",
+        "Connected with {other}. They're tougher than they look."
+      ],
+      "grade_failed": [
+        "Failed {subject}. That hit different. I don't like losing at anything.",
+        "{subject} is kicking my butt. I need to train harder. Study harder. Whatever.",
+        "Can't fail {subject} again. I need to be eligible."
+      ],
+      "grade_improved": [
+        "{subject} grade UP. See? Hard work pays off everywhere.",
+        "{grade} in {subject}. Didn't think I had it in me.",
+        "Improving at {subject}. It's like training — you just have to show up."
+      ],
+      "encouraged": [
+        "Got a boost today. Someone believes in me. Time to prove them right.",
+        "Nothing motivates me like someone saying I can do it.",
+        "Feeling charged up. Somebody said exactly what I needed to hear."
+      ],
+      "prospective": [
+        "New day. Time to go hard.",
+        "I'm coming in strong today. Nobody outworks me.",
+        "Today's the day I push past my limits."
+      ]
+    },
+
+    "Artist": {
+      "happy": [
+        "Everything felt saturated today. The good kind.",
+        "{fav_skill} just poured out of me. I love when that happens.",
+        "I made something today that I actually like. That almost never happens."
+      ],
+      "neutral": [
+        "Tried to make something. It was okay. Just okay.",
+        "{loc} The light was wrong all day. Flat and gray.",
+        "I couldn't find the feeling I was looking for."
+      ],
+      "sad": [
+        "Everything feels washed out today.",
+        "I couldn't make anything I liked. The {dread_skill} didn't help.",
+        "Some days I can't get to the thing underneath. Today was one of those."
+      ],
+      "tired": [
+        "Too tired to create. That's the worst kind of tired.",
+        "My hands want to make things but my body won't cooperate.",
+        "Numb. Can't feel the textures today."
+      ],
+      "dating": [
+        "Something changed with {partner} today. Like a key change in a song you thought you knew.",
+        "I keep trying to describe what I feel about {partner} and the words aren't right yet.",
+        "I want to make something about this. About {partner}. I don't know what yet."
+      ],
+      "crush": [
+        "{crush} has this way of moving that I can't stop sketching in my head.",
+        "Colors look different when {crush} is nearby. Warmer.",
+        "I think about {crush} the way I think about a piece I haven't started yet. Full of possibility."
+      ],
+      "conflict": [
+        "The thing with {other} left a color in my chest I can't quite name. Something gray-green.",
+        "I said the wrong things to {other}. Words I can't take back, like paint that won't come off.",
+        "Hard to create after what happened with {other}."
+      ],
+      "friendship_levelup": [
+        "{friend} sees things I don't. That's rare.",
+        "Being with {friend} opens something up.",
+        "I want to make something for {friend}. Just to say: I see you too."
+      ],
+      "match": [
+        "Talked to {other} about something real today. It left a mark.",
+        "{other} described something I felt but couldn't name. I wrote it down.",
+        "Good conversation with {other}. Like finding a color I've been looking for."
+      ],
+      "grade_failed": [
+        "{subject} doesn't speak my language. I failed it and I'm not even surprised.",
+        "The {subject} grade stings. Not because I care about grades. Because I care about getting things right.",
+        "Failed {subject}. Maybe some things aren't meant to be beautiful."
+      ],
+      "grade_improved": [
+        "{subject} is starting to make sense. Like learning a new medium.",
+        "{grade} in {subject}. There's something satisfying about unexpected growth.",
+        "Better at {subject}. Every skill is just a different way of seeing."
+      ],
+      "encouraged": [
+        "Someone said something that cracked open a door I'd been leaning against.",
+        "Encouragement hit me in a weird way today. Like sunlight through stained glass.",
+        "I didn't know I needed that. But I did."
+      ],
+      "prospective": [
+        "I have a feeling about today. Something wants to be made.",
+        "The light is different this morning. I want to chase it.",
+        "I keep seeing {fav_skill} possibilities everywhere. Today might be the day I catch one."
+      ]
+    },
+
+    "Flirt": {
+      "happy": [
+        "Today was magnetic. I was ON and everyone felt it.",
+        "Good conversations, great eye contact, perfect day.",
+        "{loc} Feeling cute. The vibes are immaculate."
+      ],
+      "neutral": [
+        "Decent day. Nobody really caught my attention though.",
+        "Flirted a little. Nothing stuck. {loc}",
+        "I need more interesting people to talk to around here."
+      ],
+      "sad": [
+        "Nobody noticed me today. That stings more than I'd admit.",
+        "Tried to be charming and it bounced off everyone. Bad day.",
+        "I hate when the spark isn't there. {dread_skill} didn't help."
+      ],
+      "tired": [
+        "Too tired to be charming. This is a crisis.",
+        "Can't flirt when I can barely keep my eyes open.",
+        "I need beauty sleep and I am NOT getting it."
+      ],
+      "dating": [
+        "Okay so {partner} and I are official and honestly? I'm smitten. Actually smitten.",
+        "I flirt with everyone but {partner} is the one who makes me forget my lines.",
+        "Dating {partner}. The game is over and I don't even miss it."
+      ],
+      "crush": [
+        "I've flirted with half this school and {crush} is the one who made ME blush.",
+        "{crush} is different. I can't explain it. I actually get nervous.",
+        "Okay I have a crush on {crush} and my whole brand is falling apart."
+      ],
+      "conflict": [
+        "The {other} thing was ugly. Charm doesn't fix everything, turns out.",
+        "I tried to smooth things over with {other} and it made it worse.",
+        "I usually talk my way out of things. Not this time."
+      ],
+      "friendship_levelup": [
+        "{friend} likes me for real. Not the performance. The real me.",
+        "Me and {friend} are actually close now. That's different from just being fun.",
+        "{friend} sees through the flirting and still wants to hang out. That means something."
+      ],
+      "match": [
+        "Sparks with {other}. And I mean the good kind.",
+        "{other} and I have this energy. It's electric.",
+        "Great conversation with {other}. Chemistry for days."
+      ],
+      "grade_failed": [
+        "Failed {subject}. I can't charm my way through a test apparently.",
+        "{subject} was a disaster. Good thing I have other talents.",
+        "The {subject} grade is embarrassing. Moving on."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}! Turns out I'm smart AND cute.",
+        "Improvement in {subject}. I contain multitudes.",
+        "Better at {subject}. Shocking everyone, especially me."
+      ],
+      "encouraged": [
+        "Someone gave me a real compliment today. Not the kind I fish for. A real one.",
+        "Got encouraged and it wasn't even about my looks. Weird. Nice.",
+        "Sometimes you just need someone to see the real you."
+      ],
+      "prospective": [
+        "New day, new opportunities. Let's see who's interesting today.",
+        "I've got a feeling about today. Someone's going to surprise me.",
+        "Time to make someone's day a little brighter."
+      ]
+    },
+
+    "Musician": {
+      "happy": [
+        "Everything had rhythm today. Even the bad parts had good timing.",
+        "{fav_skill} was flowing. Like when you hit the groove and it just plays itself.",
+        "Good day. Felt like a song in a major key."
+      ],
+      "neutral": [
+        "Flat day. No dynamics. Just mezzo-piano everything.",
+        "{loc} Going through the motions. Couldn't find my tempo.",
+        "Off-key day. Not terrible, just... slightly wrong."
+      ],
+      "sad": [
+        "Everything's in a minor key today.",
+        "Tried to play and nothing came out right. The music wasn't there.",
+        "Bad day. The kind you write sad songs about."
+      ],
+      "tired": [
+        "My fingers won't move and my head is full of static.",
+        "Too tired to play. That's the loneliest feeling.",
+        "I need rest. My timing is off and my soul is off and everything is off."
+      ],
+      "dating": [
+        "{partner} is my favorite song. The kind you put on repeat and never skip.",
+        "I wrote something for {partner} today. I might never show them. But it exists.",
+        "Dating {partner}. This feeling has a melody I haven't figured out yet."
+      ],
+      "crush": [
+        "{crush} has a frequency I'm tuned to. I hear them in every room.",
+        "I started writing something and realized it was about {crush}. Oh no.",
+        "Every song sounds like it's about {crush} right now."
+      ],
+      "conflict": [
+        "The thing with {other} was pure dissonance. Couldn't resolve it.",
+        "After the {other} fight everything sounds harsh. Need to recalibrate.",
+        "I don't have words for the {other} thing. Maybe I'll have notes."
+      ],
+      "friendship_levelup": [
+        "{friend} vibes on the same frequency. Not many people do.",
+        "Making music near {friend} makes it better. They're part of the sound now.",
+        "{friend} gets it. The way silence between songs is still music."
+      ],
+      "match": [
+        "Had a conversation with {other} that felt like a duet.",
+        "{other} said something that struck a chord. Literally thinking about it in music.",
+        "Good harmony with {other} today."
+      ],
+      "grade_failed": [
+        "Failed {subject}. It doesn't have a beat so I can't remember any of it.",
+        "{subject} grade crashed. I should care more. I'd rather be playing.",
+        "Can't make {subject} into music. Can't make it make sense."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. Found the rhythm of it finally.",
+        "Better at {subject}. Everything has a pattern if you listen long enough.",
+        "{subject} improvement. Like learning a new instrument — awkward then natural."
+      ],
+      "encouraged": [
+        "Someone said the right thing at the right time. Perfect cadence.",
+        "Got encouraged today. It resonated. Like a tuning fork to the chest.",
+        "There's a note someone played for me today and I'm still humming it."
+      ],
+      "prospective": [
+        "I have a melody in my head from yesterday. I need to get to the music room.",
+        "Today I want to play until the music plays me.",
+        "Woke up with a song stuck in my head. Today's going to be a good day."
+      ]
+    },
+
+    "Attractive": {
+      "happy": [
+        "Good day. Felt good, looked good. Everything aligned.",
+        "{loc} I felt confident today. Like genuinely, not the performance kind.",
+        "Today just worked. I was comfortable in my own skin."
+      ],
+      "neutral": [
+        "Whatever day. {loc} Felt kind of watched but not seen.",
+        "Normal day. Smiled at people. They smiled back. Is that connection? I don't know.",
+        "Went through the motions. I look fine. Everything's fine."
+      ],
+      "sad": [
+        "Bad day. And everyone still expects me to smile through it.",
+        "I'm tired of people noticing everything about me except that I'm not okay.",
+        "Nobody asked how I actually feel today. They never do."
+      ],
+      "tired": [
+        "Exhausted. Don't have the energy to perform today.",
+        "Too tired to care what I look like. That's a first.",
+        "I just want to be invisible today. Too tired for the attention."
+      ],
+      "dating": [
+        "{partner} looks at me like I'm a person, not a thing. That's why I said yes.",
+        "Dating {partner}. They see me. Not the surface. Me.",
+        "I chose {partner}. Not because they chose me first. Because they actually listened."
+      ],
+      "crush": [
+        "I'm used to people liking me. {crush} is different. I like THEM.",
+        "{crush} makes me nervous. Nobody makes me nervous.",
+        "I don't know how to have a crush. Usually it just... happens to me. This is new."
+      ],
+      "conflict": [
+        "{other} and I had a moment. A bad one. I couldn't smile my way out of it.",
+        "The thing with {other} was real. I couldn't just be charming about it.",
+        "I don't handle conflict well. Usually people just give in. {other} didn't."
+      ],
+      "friendship_levelup": [
+        "{friend} likes me for who I am, not how I look. You can tell the difference.",
+        "Getting closer with {friend}. They see through it. That's terrifying and good.",
+        "{friend} and I are actually friends. Real ones."
+      ],
+      "match": [
+        "Had a real conversation with {other}. Not the surface kind.",
+        "{other} talked to me like a person today. I noticed.",
+        "Connected with {other}. They looked at my eyes, not at me."
+      ],
+      "grade_failed": [
+        "Failed {subject}. Nobody's going to feel sorry for me.",
+        "The {subject} grade is bad. People are going to assume I don't care. I do.",
+        "{subject} failure. I hate proving stereotypes right."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. I earned that. Me. Not my face.",
+        "Better at {subject}. Proof that I'm more than what people see.",
+        "{subject} grade improved. Feels good to be recognized for my brain."
+      ],
+      "encouraged": [
+        "Someone encouraged me for something that had nothing to do with how I look.",
+        "Got real encouragement today. Not flattery. Encouragement. There's a difference.",
+        "I think someone actually believes in me. Not in the idea of me. In me."
+      ],
+      "prospective": [
+        "Another day of being looked at. I'd rather be known.",
+        "I want today to be about what I DO, not how I look.",
+        "Maybe today someone will see past the obvious."
+      ]
+    },
+
+    "Anxious": {
+      "happy": [
+        "Today was good. I'm waiting for it to stop being good but so far so good.",
+        "Genuinely enjoyed {fav_skill} today. Only spiraled about it twice.",
+        "Nice day. I'm trying not to over-analyze why."
+      ],
+      "neutral": [
+        "Nothing bad happened. I'm going to count that as a win.",
+        "{loc} I kept waiting for something to go wrong. It didn't. I don't trust it.",
+        "Average day. The kind where you hold your breath the whole time."
+      ],
+      "sad": [
+        "Everything felt like too much today. I don't know how to explain it.",
+        "I kept thinking I was bothering people. I might have been. I don't know.",
+        "The {dread_skill} situation is getting in my head more than I want to admit."
+      ],
+      "tired": [
+        "Tired but can't stop thinking. The worst combination.",
+        "My body is exhausted but my brain won't shut up.",
+        "Need sleep. Won't get sleep. Will think about not sleeping instead."
+      ],
+      "dating": [
+        "We're dating now I think? {partner} said it and I said yes and I don't know if I said the right thing.",
+        "I keep replaying the conversation with {partner}. Did I say too much? I said too much.",
+        "This is good. This is definitely good. I just need to not mess it up."
+      ],
+      "crush": [
+        "I like {crush} and I'm already thinking about everything that could go wrong.",
+        "{crush} looked at me today and I panicked. Just full panic. Normal.",
+        "What if {crush} finds out I like them? What if they don't like me back? What if they DO?"
+      ],
+      "conflict": [
+        "The thing with {other} is still in my head. What if they're really upset? What if it's worse than it seemed?",
+        "I should have said something different to {other}. I'm still thinking about it.",
+        "I don't do well with conflict. I know that. I'm working on it."
+      ],
+      "friendship_levelup": [
+        "I think {friend} actually likes spending time with me. That's still hard to believe.",
+        "Being around {friend} is easy. I don't have to do the calculations.",
+        "I got less anxious today with {friend} around. That feels important."
+      ],
+      "match": [
+        "Had a good conversation with {other}. I only second-guessed myself three times.",
+        "{other} was easy to talk to. That almost never happens.",
+        "I think {other} actually enjoyed talking to me? I think?"
+      ],
+      "grade_failed": [
+        "Failed {subject}. I knew this would happen. I told myself it would happen and it happened.",
+        "The {subject} grade is bad. I feel sick. I need to fix this.",
+        "{subject} failure. The spiral started about thirty seconds after I saw the grade."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. Okay. Okay that's good. Don't get too excited.",
+        "Better at {subject}. I'm going to try to enjoy this without worrying about next time.",
+        "{subject} improvement. Relief. Pure relief."
+      ],
+      "encouraged": [
+        "Someone told me I could do this. I'm holding onto that with both hands.",
+        "Got encouragement today and I almost cried. I don't know why.",
+        "I needed that more than they know."
+      ],
+      "prospective": [
+        "Today is going to be fine. Today is going to be fine. Today is going to be fine.",
+        "I made a list of things that could go wrong. Then I crossed half of them out. Progress.",
+        "What if today is actually good? Is that allowed?"
+      ]
+    },
+
+    "Empath": {
+      "happy": [
+        "Good energy in the school today. I can always tell.",
+        "Everyone seemed lighter today. I'll take it.",
+        "I love when {fav_skill} brings people together."
+      ],
+      "neutral": [
+        "Mixed signals all day. Some people were great, some were off.",
+        "{loc} I kept picking up on things I wish I hadn't.",
+        "Fine day for everyone else. I absorbed too much of it."
+      ],
+      "sad": [
+        "I could feel the tension in the room today and it got under my skin.",
+        "Hard to explain — nobody said anything, but something was off.",
+        "I absorbed too much today. I need to not do that."
+      ],
+      "tired": [
+        "Emotionally drained. Everyone's feelings weigh on me today.",
+        "Too many big emotions in one building. I'm spent.",
+        "I need to be alone. Other people's feelings are too loud right now."
+      ],
+      "dating": [
+        "I could tell {partner} was nervous. So was I. It felt real though.",
+        "Something shifted with {partner} today and I felt it even before anything was said.",
+        "I kept checking if {partner} was okay. I think they were. I think I was too."
+      ],
+      "crush": [
+        "I feel {crush}'s presence in a room before I see them. That means something.",
+        "Every emotion {crush} has, I feel it too. It's overwhelming and wonderful.",
+        "{crush} was happy today. So I was happy. That's how this works for me."
+      ],
+      "conflict": [
+        "I could tell {other} was hurting even while we were arguing. I don't know how to fix that.",
+        "The fight with {other} upset me less because of what was said and more because of how they looked.",
+        "I think {other} needed something I didn't know how to give today."
+      ],
+      "friendship_levelup": [
+        "{friend} seems happier lately. I like to think I'm part of that.",
+        "I noticed {friend} smiling more today. It made me smile too.",
+        "There's something easy about being around {friend} now. Like we don't have to try."
+      ],
+      "match": [
+        "Talked to {other} and really felt what they were feeling. We connected deep.",
+        "{other} opened up to me. I could feel it shifting between us.",
+        "I understood {other} today in a way I don't think they expected."
+      ],
+      "grade_failed": [
+        "Failed {subject}. I could feel my own disappointment for once, not just everyone else's.",
+        "The {subject} grade hurt. My own pain, not borrowed. That's actually harder.",
+        "{subject} was bad. I need to focus on my own stuff for once."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. I felt proud. Just me. Just mine.",
+        "Better at {subject}. It's nice to have a feeling that belongs to me.",
+        "{subject} improvement. The teacher seemed proud too. That doubled it."
+      ],
+      "encouraged": [
+        "I felt the sincerity when they encouraged me. It was real. I can always tell.",
+        "Someone reached out today. I could feel how much they meant it.",
+        "The encouragement landed right in my chest. I'm carrying it warm."
+      ],
+      "prospective": [
+        "I can feel the vibe of the school this morning. Something's going to happen today.",
+        "I want to check on people today. Some of them have been carrying a lot.",
+        "Hoping for good energy today. Yesterday was heavy."
+      ]
+    },
+
+    "Rebel": {
+      "happy": [
+        "Not bad.",
+        "Decent day. I'll take it.",
+        "I did {fav_skill} and it was good. Simple."
+      ],
+      "neutral": [
+        "Whatever.",
+        "Day happened. I showed up. Don't give me a medal.",
+        "{loc} It was fine. Everything is always fine."
+      ],
+      "sad": [
+        "This place can be suffocating sometimes.",
+        "I don't want to talk about {dread_skill}. Or anything.",
+        "Fine. Everything is fine. I'm fine."
+      ],
+      "tired": [
+        "Tired of this place. Also just regular tired.",
+        "Don't have the energy to fight the system today.",
+        "Even rebellion needs sleep."
+      ],
+      "dating": [
+        "So {partner} and I are a thing. Whatever. Not a big deal. (It's a big deal.)",
+        "I don't do relationships. Except apparently now I do. With {partner}. Fine.",
+        "Not going to make this into something. It is what it is. {partner}'s cool."
+      ],
+      "crush": [
+        "I don't have a crush on {crush}. I just think about them sometimes. Shut up.",
+        "{crush} is the only person here who doesn't annoy me. Make of that what you will.",
+        "I refuse to have feelings about {crush}. (I have feelings about {crush}.)"
+      ],
+      "conflict": [
+        "Had words with {other}. I said what I said.",
+        "{other} and I disagreed. I stand by my position.",
+        "Not going to apologize for having an opinion."
+      ],
+      "friendship_levelup": [
+        "{friend} doesn't treat me like I'm a problem to solve. That's rare.",
+        "I don't need friends. But if I did, {friend} would qualify.",
+        "Whatever. {friend}'s alright."
+      ],
+      "match": [
+        "{other} didn't try to change me. Respect.",
+        "Actually had a decent talk with {other}. They're not like the rest.",
+        "{other} said something real. I didn't expect that."
+      ],
+      "grade_failed": [
+        "Failed {subject}. The system failed me first.",
+        "{subject} is a joke. The grade is a joke. This whole thing is a joke.",
+        "Oh no, I failed {subject}. Anyway."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. Don't make it weird.",
+        "I guess I'm not terrible at {subject}. Huh.",
+        "Better grade. Whatever. I didn't do it for them."
+      ],
+      "encouraged": [
+        "Someone tried to encourage me. I pretended it didn't land. It landed.",
+        "Don't need a pep talk. (The pep talk helped.)",
+        "I'm not going to admit it helped. But it helped."
+      ],
+      "prospective": [
+        "Another day. Let's see what this place throws at me.",
+        "I have zero expectations. That way everything is a surprise.",
+        "If anyone tells me what to do today I'm doing the opposite."
+      ]
+    },
+
+    "Perfectionist": {
+      "happy": [
+        "Everything was exactly right today. {fav_skill} was precise.",
+        "I achieved 100% of what I planned. That's the only acceptable outcome.",
+        "Clean execution. No wasted effort. {loc} Perfect."
+      ],
+      "neutral": [
+        "Adequate. Not perfect. There's a gap and it bothers me.",
+        "{loc} I made two mistakes today. I remember both of them.",
+        "If I'd had ten more minutes everything would have been right."
+      ],
+      "sad": [
+        "Today was wrong. The details were wrong. I was wrong.",
+        "I can't fix {dread_skill}. I've tried everything and it's still not right.",
+        "Nothing I did today was good enough."
+      ],
+      "tired": [
+        "Exhausted. But the work isn't done. It's not right yet.",
+        "I know I should rest. But if I stop now the imperfections will haunt me.",
+        "Too tired to do things properly. Too perfectionist to accept that."
+      ],
+      "dating": [
+        "I'm dating {partner} now. I need to be the best version of myself for them.",
+        "{partner} says I'm enough as I am. I'm trying to believe that.",
+        "Dating {partner}. I've already made a list of ways to be a better partner."
+      ],
+      "crush": [
+        "I keep rehearsing what I'd say to {crush}. Every version has a flaw.",
+        "{crush} makes me aware of every imperfect thing about myself.",
+        "I like {crush}. I need to figure out the right way to show it. Exactly the right way."
+      ],
+      "conflict": [
+        "I said three things wrong to {other}. I know exactly which three.",
+        "The {other} argument replays in my head and I keep editing my lines.",
+        "I could have handled the {other} situation better. I know exactly how."
+      ],
+      "friendship_levelup": [
+        "{friend} accepts my standards. Most people can't.",
+        "I trust {friend}. They're careful too.",
+        "{friend} and I understand precision. That's the basis."
+      ],
+      "match": [
+        "Conversation with {other} was well-constructed. Both sides contributed.",
+        "{other} is meticulous. I noticed. I appreciate it.",
+        "Good exchange with {other}. Clean, direct, no wasted words."
+      ],
+      "grade_failed": [
+        "Failed {subject}. This cannot stand. I need a specific corrective plan by tomorrow.",
+        "The {subject} grade is wrong. Not wrong as in unfair. Wrong as in I failed. I don't fail.",
+        "{subject}. Failed. I know exactly where I went wrong. Seventeen places."
+      ],
+      "grade_improved": [
+        "{grade} in {subject}. Closer to where it should be. Not there yet.",
+        "{subject} improvement. The corrections worked. More corrections needed.",
+        "Better. Still not perfect. But measurably better."
+      ],
+      "encouraged": [
+        "Someone said I'm doing well. I have evidence that I could be doing better.",
+        "Encouragement received. I appreciate the intent even if my standards disagree.",
+        "Maybe 'good enough' is a thing. Maybe."
+      ],
+      "prospective": [
+        "Today needs to be better than yesterday. Specifically: fewer errors.",
+        "I have a plan. It accounts for variables. It will work.",
+        "Three goals. Measurable. Achievable. No excuses."
+      ]
+    }
+  },
+
+  "generic_mood": {
+    "happy": [
+      "Today was amazing! I'm really getting into {fav_skill}.",
+      "Can't stop smiling. {loc} Everything just clicked today.",
+      "I think I'm starting to really find my thing here. {fav_skill} feels RIGHT.",
+      "Good vibes only today.",
+      "I love days like this. {loc} More of this please.",
+      "Honestly feeling myself today. {fav_skill} is my whole personality at this point.",
+      "Everything just felt easy today. I don't know, I'm just happy.",
+      "Had the best conversation at lunch. This place is growing on me.",
+      "{loc} I came in dreading {dread_skill} and somehow still ended up smiling.",
+      "Okay I'm not going to overthink it. Today was just a good day."
+    ],
+    "neutral": [
+      "Pretty normal day. {loc} Nothing to write home about.",
+      "Meh. I wish I could do more {fav_skill} instead of {dread_skill}.",
+      "Going through the motions. Could be worse, could be better.",
+      "I guess today was okay? Whatever.",
+      "{loc} Fine. Everything is fine.",
+      "Not much to say. Did stuff, ate lunch, here I am.",
+      "I keep waiting for something to happen. {loc}",
+      "Feeling kind of invisible today. Not bad, just... there.",
+      "I need to figure out what I actually want. {dread_skill} is definitely not it.",
+      "Some days you're just... in the middle of everything and nothing."
+    ],
+    "sad": [
+      "Ugh. Why do I have to do {dread_skill}? It's the WORST.",
+      "Feeling really down today. {loc} I just want to be left alone.",
+      "Nobody gets me. I wish someone would notice I hate {dread_skill}.",
+      "Bad day. Can someone PLEASE just let me do {fav_skill}?",
+      "I don't know. Everything just felt off today.",
+      "{loc} I was hoping things would be different but whatever.",
+      "I sat alone at lunch and I don't really want to talk about it.",
+      "I keep thinking about how much I miss doing {fav_skill} properly.",
+      "Why is {dread_skill} always the thing they make me do? It's exhausting.",
+      "Hard to explain. I'm just sad. Nothing happened. I'm just sad."
+    ],
+    "tired": [
+      "So... exhausted... can barely write this...",
+      "Running on fumes. When do we get a break?",
+      "Too tired to think. Too tired to care. Just tired.",
+      "Everything is blurry. I need a nap, not more {dread_skill}.",
+      "My body hurts and my brain is gone. {loc} I survived, barely.",
+      "I think I'm the only person here who is actually this tired.",
+      "Could not tell you what happened today. All I know is I'm tired.",
+      "Please. Just one good night of sleep. That's all I'm asking.",
+      "I tried to focus on {fav_skill} but I couldn't even manage that today.",
+      "Zero thoughts. Head empty. Bed please."
+    ]
+  },
+
+  "generic_event": {
+    "dating": [
+      "We're officially dating. I can't believe this is real.",
+      "It's official. Me and {partner}. Together.",
+      "I keep saying it in my head. We're dating. We're actually dating."
+    ],
+    "crush": [
+      "I think I have a crush on {crush}. Oh no.",
+      "I can't stop thinking about {crush}.",
+      "Something about {crush}... I don't know. I just want to be around them."
+    ],
+    "conflict": [
+      "Had a rough moment with {other}. I don't feel great about it.",
+      "Things got tense with {other}. I wish it hadn't happened.",
+      "Got into it with {other}. I need to process this."
+    ],
+    "friendship_levelup": [
+      "I think {friend} and I are really becoming close.",
+      "{friend} means a lot to me. More than I expected.",
+      "It's nice to have someone like {friend} in my corner."
+    ],
+    "match": [
+      "Had a really good conversation with {other} today.",
+      "Something clicked with {other}. I hope we talk again.",
+      "Connected with {other} in a way I didn't expect."
+    ],
+    "grade_failed": [
+      "Got my {subject} grade back. It's bad. Really bad.",
+      "Failed {subject}. I don't know what to do.",
+      "The {subject} grade hit hard. I need to figure this out."
+    ],
+    "grade_improved": [
+      "My {subject} grade went up! The hard work is paying off.",
+      "{grade} in {subject}. I'm actually proud of myself.",
+      "Improvement in {subject}. Feels good to see progress."
+    ],
+    "encouraged": [
+      "Someone believed in me today.",
+      "I can do this.",
+      "Feeling kind of unstoppable right now.",
+      "Someone said exactly what I needed to hear."
+    ],
+    "skill_milestone": [
+      "I'm actually getting good at {skill}. When did that happen?",
+      "Hit a milestone in {skill} today. All the practice is showing.",
+      "{skill} is starting to feel natural. Like it's really mine."
+    ],
+    "jealous": [
+      "I saw {crush} with {other} today. I hate this feeling.",
+      "Why does {crush} always end up talking to {other}?",
+      "The way {crush} laughs with {other}... I can't."
+    ]
+  },
+
+  "generic_prospective": [
+    "I wonder what today will bring.",
+    "New day. Starting fresh.",
+    "I hope today is better than yesterday.",
+    "I don't know what to expect today. We'll see.",
+    "Another day. Let's see what happens.",
+    "I have a feeling about today. Can't tell if it's good or bad.",
+    "Morning. I'm here. That's something.",
+    "Trying to go into today with an open mind."
+  ],
+
+  "thought_journal": {
+    "event": [
+      "Can't stop thinking about the {thought}.",
+      "The {thought} is still on my mind.",
+      "I keep replaying the {thought}. Over and over.",
+      "After the {thought} I don't know how to feel. Just sitting with it."
+    ],
+    "social": [
+      "{thought} I'm still smiling about it.",
+      "Thinking about {thought}.",
+      "{thought} I didn't expect today to go like that.",
+      "Something shifted today. {thought}",
+      "{thought} I haven't felt this way in a while.",
+      "I couldn't focus on anything because I kept thinking — {thought}"
+    ],
+    "academic": [
+      "{thought} School stuff is really on my mind.",
+      "Report cards came back... {thought}",
+      "{thought} I need to figure out a plan.",
+      "{thought} It's stressing me out more than I want to admit.",
+      "I've been trying not to spiral but... {thought}"
+    ],
+    "activity": [
+      "{thought} It's the little things.",
+      "{thought}",
+      "{thought} I didn't expect to care this much.",
+      "Something clicked today. {thought}",
+      "{thought} I want more days like this."
+    ],
+    "rest": [
+      "{thought} My body is telling me something.",
+      "{thought}",
+      "{thought} I need to actually take care of myself.",
+      "I keep pushing through when I should probably just stop. {thought}"
+    ],
+    "fun": [
+      "{thought} I need to actually do something fun.",
+      "{thought} This place gets so monotonous sometimes.",
+      "{thought} When was the last time I actually laughed?"
+    ]
+  },
+
+  "boring_day": {
+    "_comment": "Guaranteed minimum entry when nothing happened all day. Trait-voiced.",
+    "generic": [
+      "Nothing really happened today. Just another day.",
+      "Quiet day. Not much to write about.",
+      "I don't know what to say. Today just... was.",
+      "Another day at school. That's about it."
+    ],
+    "Bookworm": [
+      "Nothing of note today. I read. That was enough.",
+      "Uneventful. I used the time productively, at least.",
+      "No interruptions. No drama. Just work. I should have more days like this."
+    ],
+    "Social Butterfly": [
+      "LITERALLY nothing happened today. I am so bored I could scream.",
+      "Today was the quietest day of my life and I hated every second of it.",
+      "Nobody wanted to do ANYTHING. Is everyone okay?? Am I okay??"
+    ],
+    "Loner": [
+      "Quiet day. Good.",
+      "Nobody bothered me. Nothing happened. Perfect.",
+      "Days like this are why I stay."
+    ],
+    "Class Clown": [
+      "Today was so boring I couldn't even think of a joke about how boring it was.",
+      "Nothing happened. Zero material. Worst day for comedy.",
+      "I tried to make today interesting. Today said no."
+    ],
+    "Overachiever": [
+      "Unproductive day. I need to do better tomorrow.",
+      "Nothing accomplished. Nothing progressed. This is unacceptable.",
+      "I had time today. I should have used it better."
+    ],
+    "Slacker": [
+      "Same as usual. Not complaining.",
+      "Chill day. The best kind. Nothing happened and that's the point.",
+      "Today was perfectly average and I'm at peace with that."
+    ],
+    "Jock": [
+      "Slow day. I need to move more tomorrow.",
+      "No action today. Feel restless. Need to burn this energy off.",
+      "Quiet. Too quiet. I'm not built for quiet."
+    ],
+    "Artist": [
+      "Blank canvas kind of day. Nothing came.",
+      "I stared at things all day waiting for something to speak to me. Silence.",
+      "Some days the world has nothing to say. Today was one of those."
+    ],
+    "Flirt": [
+      "Nobody interesting around today. Tragic.",
+      "Zero sparks. Zero chemistry. Zero fun. What was the point of today.",
+      "The most boring day in the history of days. My talent is being wasted."
+    ],
+    "Musician": [
+      "Quiet day. No rhythm to it.",
+      "Silence, but not the good kind. The dead kind.",
+      "Some days don't have a soundtrack. Today was one of those."
+    ],
+    "Attractive": [
+      "Uneventful. At least I looked good doing nothing.",
+      "Nobody noticed me today. Or maybe they did and I didn't notice them noticing. Whatever.",
+      "Quiet day. Didn't mind it, actually."
+    ],
+    "Anxious": [
+      "Nothing happened. Which should be relaxing but I'm still tense.",
+      "Today was quiet and I spent the whole time waiting for something to go wrong. It didn't. I'm still waiting.",
+      "No bad news. No good news. Just... existing. Why is that so hard?"
+    ],
+    "Empath": [
+      "Everyone was just kind of... existing today. Me included.",
+      "Quiet day. I could feel the stillness in the building. It wasn't bad.",
+      "Nothing happened to anyone today. I checked. We're all just here."
+    ],
+    "Rebel": [
+      "Nothing happened. This place is suffocating sometimes.",
+      "Boring day. The system wins when nothing happens.",
+      "Another day of nothing. Cool. Great. Love it here."
+    ],
+    "Perfectionist": [
+      "No opportunities to improve today. Frustrating.",
+      "Nothing measurable happened. I can't optimize a day with no data.",
+      "Today produced zero results. That's not acceptable but it's what happened."
+    ]
+  },
+
+  "activity_reflection": {
+    "_comment": "Fires at ~15-20% when completing an activity. Variants for fav/dread/neutral/improving.",
+    "_variables": "{skill}, {room}, {fav_skill}, {dread_skill}",
+    "fav_generic": [
+      "I love doing {skill}. This is my thing.",
+      "{skill} just makes sense to me. I could do this all day.",
+      "Time flies when I'm doing {skill}.",
+      "{room} feels like where I'm supposed to be."
+    ],
+    "dread_generic": [
+      "Why am I doing {skill}. Why.",
+      "Another hour of {skill}. I can feel my soul leaving my body.",
+      "{skill} is actual torture. Who decided this was necessary.",
+      "The {room} is where dreams go to die."
+    ],
+    "neutral_generic": [
+      "Did some {skill} today. It was fine.",
+      "Spent time in the {room}. Nothing special.",
+      "{skill} is... okay? I don't hate it. I don't love it."
+    ],
+    "improving_generic": [
+      "I'm actually not terrible at {skill} anymore. When did that happen?",
+      "{skill} is starting to click. I can feel myself getting better.",
+      "Something shifted with {skill} today. I'm improving.",
+      "The {room} doesn't scare me as much as it used to."
+    ],
+    "fav_trait": {
+      "Bookworm": [
+        "{skill} is where my brain works best. I could live in the {room}.",
+        "Hours of {skill} and I didn't notice time passing. Peak efficiency."
+      ],
+      "Social Butterfly": [
+        "Doing {skill} with people around is the BEST. The {room} was buzzing today!",
+        "I love {skill} but I love doing it with everyone else even more."
+      ],
+      "Loner": [
+        "Just me and {skill}. Perfect.",
+        "The {room} was quiet today. I got to actually focus."
+      ],
+      "Class Clown": [
+        "{skill} is actually fun when you don't take it seriously.",
+        "I made the {room} fun today. You're welcome, everyone."
+      ],
+      "Overachiever": [
+        "{skill} performance: excellent. Exceeded daily target.",
+        "Crushed {skill} today. This is what happens when you put in the work."
+      ],
+      "Slacker": [
+        "{skill} doesn't even feel like work. That's the dream.",
+        "Hung out in the {room} doing {skill}. Easy day."
+      ],
+      "Jock": [
+        "{skill} had me in the zone. Full send.",
+        "The {room} is my arena. I was LOCKED IN today."
+      ],
+      "Artist": [
+        "{skill} poured out of me today. The {room} was glowing.",
+        "I made something with {skill} that surprised me."
+      ],
+      "Flirt": [
+        "Looked great doing {skill} in the {room}. Not that anyone was watching. (They were watching.)",
+        "{skill} is more fun with an audience."
+      ],
+      "Musician": [
+        "{skill} had rhythm today. Everything was in tempo.",
+        "The {room} sounded right today. Everything harmonized."
+      ],
+      "Attractive": [
+        "Felt confident in the {room} today. {skill} came naturally.",
+        "{skill} is one of the things that's really mine."
+      ],
+      "Anxious": [
+        "{skill} helps quiet my brain. The {room} feels safe.",
+        "I didn't overthink {skill} today. That's progress."
+      ],
+      "Empath": [
+        "The energy in the {room} was good today. {skill} felt collaborative.",
+        "I could feel everyone getting into {skill}. We were all in it together."
+      ],
+      "Rebel": [
+        "{skill} on my own terms. That's the only way.",
+        "The {room} isn't bad when nobody's telling me what to do."
+      ],
+      "Perfectionist": [
+        "{skill} execution: precise. No wasted motion.",
+        "I hit my {skill} benchmark today. Moving the target up tomorrow."
+      ]
+    },
+    "dread_trait": {
+      "Bookworm": [
+        "{skill} is a waste of my cognitive resources.",
+        "I don't understand why {skill} is required. It serves no purpose."
+      ],
+      "Social Butterfly": [
+        "{skill} is SO boring and nobody even wants to talk during it.",
+        "Stuck in the {room} doing {skill}. I wanted to be literally anywhere else."
+      ],
+      "Loner": [
+        "{skill}. No.",
+        "The {room} was too crowded and {skill} was too much. I want out."
+      ],
+      "Class Clown": [
+        "I tried to make {skill} funny. {skill} remains aggressively unfunny.",
+        "The {room} during {skill} is comedy purgatory."
+      ],
+      "Overachiever": [
+        "{skill} is dragging down my overall metrics. I need a strategy.",
+        "Unacceptable {skill} performance. I refuse to be bad at things."
+      ],
+      "Slacker": [
+        "{skill} is the worst. I'm going back to sleep.",
+        "Did they seriously make me do {skill}? In this economy?"
+      ],
+      "Jock": [
+        "{skill} doesn't let me move. I'm dying in here.",
+        "The {room} during {skill} is prison."
+      ],
+      "Artist": [
+        "{skill} has no beauty in it. Just rote mechanics.",
+        "I tried to find the art in {skill}. There is none."
+      ],
+      "Flirt": [
+        "Nobody looks cute doing {skill}. Nobody.",
+        "{skill} in the {room} is where charm goes to die."
+      ],
+      "Musician": [
+        "{skill} has no rhythm. No melody. Just noise.",
+        "The {room} during {skill} sounds like static."
+      ],
+      "Attractive": [
+        "Even I can't look good doing {skill}. That's how bad it is.",
+        "{skill} is humbling. Not in the good way."
+      ],
+      "Anxious": [
+        "{skill} makes me spiral. Every mistake feels enormous.",
+        "I hate {skill}. I hate that I hate it. I hate that everyone can tell I hate it."
+      ],
+      "Empath": [
+        "Everyone in the {room} was miserable during {skill}. I absorbed all of it.",
+        "{skill} drains something out of me I can't name."
+      ],
+      "Rebel": [
+        "{skill} is everything wrong with this place in one activity.",
+        "They can make me sit in the {room} but they can't make me care about {skill}."
+      ],
+      "Perfectionist": [
+        "My {skill} performance is below standard and I can't fix it. Infuriating.",
+        "{skill} resists my efforts to improve. I don't accept that."
+      ]
+    }
+  },
+
+  "mood_threshold": {
+    "_comment": "Fires when mood crosses significant thresholds.",
+    "happy_generic": [
+      "Something shifted. I feel actually good right now.",
+      "I don't know what changed but everything feels lighter.",
+      "This feeling. I want to hold onto this.",
+      "Today is good. I'm good. Everything is good."
+    ],
+    "sad_generic": [
+      "I can feel myself sinking. It's getting harder.",
+      "Things aren't great right now. I'm trying.",
+      "The weight is back. I thought it had lifted but it's back.",
+      "I don't feel like myself today."
+    ],
+    "crisis_generic": [
+      "I can't do this.",
+      "Everything is too much. I need help.",
+      "I don't know how to get through today.",
+      "Something has to change. I can't keep going like this."
+    ],
+    "crisis_trait": {
+      "Bookworm": [
+        "I can't focus. I can't read. I can't think. Everything is wrong.",
+        "My brain won't cooperate. Nothing makes sense."
+      ],
+      "Social Butterfly": [
+        "I need someone to talk to and nobody's here. I'm falling apart.",
+        "I can't be alone right now. Please. Someone."
+      ],
+      "Loner": [
+        "I want to disappear. More than usual.",
+        "I've been alone my whole life and today it actually hurts."
+      ],
+      "Class Clown": [
+        "I tried to make a joke. Nothing came out. I just sat there.",
+        "I can't be funny right now. I can't be anything."
+      ],
+      "Overachiever": [
+        "I'm failing. At everything. I don't know how to stop failing.",
+        "Nothing I do is enough. I'm never enough."
+      ],
+      "Slacker": [
+        "I thought not caring was supposed to protect me from this.",
+        "Turns out even I have a floor. I found it today."
+      ],
+      "Jock": [
+        "I can't push through this one. My body is moving but nothing's there.",
+        "I don't quit. But today I want to quit."
+      ],
+      "Artist": [
+        "The world has no color today. Everything is ash.",
+        "I can't make anything. The well is dry and I'm alone at the bottom."
+      ],
+      "Flirt": [
+        "I don't have the energy to perform today. I don't have the energy for anything.",
+        "Nobody can see me right now. The real me. And I need someone to."
+      ],
+      "Musician": [
+        "Everything is discordant. The music stopped and I don't know how to start it again.",
+        "I can't hear anything today. Just static and silence."
+      ],
+      "Attractive": [
+        "Everyone looks at me and nobody sees this. How.",
+        "I could scream right now and people would just smile at me."
+      ],
+      "Anxious": [
+        "My chest won't stop. My brain won't stop. Everything is spiraling.",
+        "I've been holding my breath for hours. I just realized."
+      ],
+      "Empath": [
+        "Everyone else's pain and mine all at once. I can't separate them anymore.",
+        "I need to not feel anything for one minute. Just one minute of silence."
+      ],
+      "Rebel": [
+        "I'm not okay. I'm not going to pretend I'm okay.",
+        "Something broke today. Inside. I don't know how to fix it."
+      ],
+      "Perfectionist": [
+        "Everything is wrong. Everything. And I can't fix any of it.",
+        "I have failed at the fundamental task of being a functional person today."
+      ]
+    }
+  },
+
+  "grade_milestone": {
+    "_comment": "Fires when grade crosses a base letter threshold upward (D→C, C→B, B→A).",
+    "_variables": "{subject}, {grade}",
+    "generic": [
+      "My {subject} grade went up to a {grade}! The work is paying off.",
+      "{grade} in {subject}. I'm actually improving.",
+      "Crossed into {grade} territory in {subject}. That feels real."
+    ],
+    "trait": {
+      "Bookworm": [
+        "{grade} in {subject}. Evidence of consistent effort.",
+        "Academic milestone: {subject} now at {grade}. Satisfactory."
+      ],
+      "Overachiever": [
+        "{grade} in {subject}. Closer to where it should be. Not done.",
+        "{subject} finally at {grade}. The grind works. Keep grinding."
+      ],
+      "Slacker": [
+        "Wait, {grade} in {subject}? How did THAT happen. I barely tried.",
+        "{subject} grade went up and I genuinely don't know why. Taking the W."
+      ],
+      "Rebel": [
+        "{grade} in {subject}. Don't make it weird.",
+        "Apparently I'm getting better at {subject}. Whatever."
+      ],
+      "Anxious": [
+        "{grade} in {subject}. Okay. Okay. I did that. Don't panic about losing it.",
+        "My {subject} grade is a {grade} now and I'm trying to enjoy it instead of worrying."
+      ],
+      "Class Clown": [
+        "{grade} in {subject}?? I'm a GENIUS and nobody can tell me otherwise.",
+        "Plot twist: I'm actually smart at {subject}. A {grade}! WHO KNEW."
+      ]
+    }
+  },
+
+  "loneliness": {
+    "_comment": "Fires when social need drops below 20.",
+    "generic": [
+      "I haven't really talked to anyone in a while.",
+      "It's lonely here sometimes.",
+      "I wish someone would come find me.",
+      "I feel like I'm invisible today."
+    ],
+    "trait": {
+      "Social Butterfly": [
+        "I NEED to talk to someone. ANYONE. I'm going to lose it.",
+        "How long has it been since I had a real conversation? Too long."
+      ],
+      "Loner": [
+        "I usually like being alone. Today it's different. Today it aches.",
+        "There's alone and there's lonely. I found the line."
+      ],
+      "Empath": [
+        "I can feel how disconnected I am right now. Like a radio between stations.",
+        "I need human contact. I need to feel someone else's feelings because mine are too heavy alone."
+      ],
+      "Anxious": [
+        "Nobody's talked to me in forever. Do they hate me? They probably hate me.",
+        "I'm alone and the thoughts are getting louder."
+      ]
+    }
+  },
+
+  "new_room": {
+    "_comment": "Fires on first visit to a room. Variable: {room}",
+    "generic": [
+      "First time in the {room}. Not bad.",
+      "The {room} is interesting. I wonder what it's like to spend more time here.",
+      "Never been to the {room} before. Different vibe."
+    ],
+    "trait": {
+      "Bookworm": ["The {room}. New environment. Cataloguing impressions."],
+      "Social Butterfly": ["Ooh, the {room}! New place, new people to meet!"],
+      "Loner": ["The {room}. It's quiet enough. I could work with this."],
+      "Artist": ["The {room} has a specific light. I want to remember this."],
+      "Rebel": ["First time in the {room}. They can't keep me here if I don't want to stay."]
+    }
+  },
+
+  "zodiac_flavor": {
+    "aries":       ["I want to DO something, not just sit here."],
+    "taurus":      ["I just want things to stay the same for five minutes."],
+    "gemini":      ["I keep starting things and not finishing them."],
+    "cancer":      ["I need to feel like I'm somewhere safe."],
+    "leo":         ["I want to matter to someone today."],
+    "virgo":       ["I made a list. It helped a little."],
+    "libra":       ["I keep going back and forth and can't decide anything."],
+    "scorpio":     ["I notice everything. Too much, maybe."],
+    "sagittarius": ["I feel cooped up. I want to go somewhere."],
+    "capricorn":   ["If I can just stay on track, everything will be fine."],
+    "aquarius":    ["Sometimes I feel like nobody here thinks like I do."],
+    "pisces":      ["I got lost in my head again today."]
+  }
+}

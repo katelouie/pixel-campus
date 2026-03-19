@@ -8,6 +8,7 @@ import json
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .academics import (
     Subject,
@@ -20,7 +21,12 @@ from .clock import TICKS_PER_DAY, GameClock
 from .defs import GameDefs, ScenarioConfig
 from .events import SchoolEvent, check_for_event, resolve_event
 from .game_events import GameEvent, GameEventBus, GameEventType
-from .journal import generate_journal_entry
+from .journal import (
+    JournalSubscriber,
+    generate_boring_day_entry,
+    generate_journal_entry,
+    generate_prospective_entry,
+)
 from .models import (
     Friendship,
     FriendshipLevel,
@@ -123,6 +129,9 @@ class GameState:
 
     # Messages generated this tick
     tick_log: list[str] = field(default_factory=list)
+
+    # Journal subscriber — set by new_game(), used for tick checks & activity hooks
+    _journal_sub: Any = field(default=None, repr=False)
 
     # Lunch tracking — reset each new day
     _lunch_dispatched: bool = False
@@ -279,6 +288,11 @@ class GameState:
             from . import social as social_module
             social_module.load_text_from_defs(defs.social_text)
 
+        # Wire journal EventBus subscriber
+        journal_sub = JournalSubscriber(state)
+        journal_sub.subscribe(state.bus)
+        state._journal_sub = journal_sub
+
         # Students start at the spawn point (location = None) so all dispatches fire
         for s in students:
             s.location = None
@@ -316,6 +330,10 @@ class GameState:
         if event:
             event_messages = resolve_event(self, event)
             self.tick_log.extend(event_messages)
+
+        # Journal tick checks (mood threshold, loneliness, new room)
+        if self._journal_sub is not None:
+            self._journal_sub.tick_check()
 
         # Advance clock
         day_ended = self.clock.advance()
@@ -519,13 +537,24 @@ class GameState:
         interval = self.scenario.report_card_interval
         if self.clock.day > 1 and self.clock.day % interval == 0:
             log.extend(self._report_card())
+            if self._journal_sub is not None:
+                self._journal_sub.on_report_card()
 
-        # Journal entries
+        # Journal entries (end-of-day retrospective + guaranteed minimum)
         for student in self.students:
-            if random.random() < 0.6:
-                entry = generate_journal_entry(student, self.clock.day)
-                student.journal.append((self.clock.day, entry))
+            today_count = sum(1 for e in student.journal if e.day == self.clock.day)
+
+            if random.random() < 0.70:
+                entry = generate_journal_entry(student, self.clock.day, self.clock.tick)
+                student.journal.append(entry)
                 log.append(f"{student.name} wrote in their journal")
+                today_count += 1
+
+            # Guaranteed minimum: if nothing was journaled all day, write a boring-day entry
+            if today_count == 0:
+                entry = generate_boring_day_entry(student, self.clock.day, self.clock.tick)
+                student.journal.append(entry)
+                log.append(f"{student.name} wrote in their journal (quiet day)")
 
         if self.total_points >= self.graduation_target:
             log.append("GRADUATION!! Your students made it!")
@@ -588,6 +617,8 @@ class GameState:
 
         # Move to next day
         self._lunch_dispatched = False
+        if self._journal_sub is not None:
+            self._journal_sub.on_day_reset()
         self.clock.new_day()
 
         # Students start at the spawn point (no room yet) so all dispatches fire properly
@@ -595,10 +626,35 @@ class GameState:
             s.location = None
 
         log.append(f"Day {self.clock.day} begins! ({self.clock.time_str})")
+
+        # Journal entries (start-of-day prospective)
+        for student in self.students:
+            # Find crush name if student has one
+            crush_name: str | None = None
+            for key, romance in self.romances.items():
+                if student.student_id not in key:
+                    continue
+                if romance.feelings_of(student.student_id) >= RomanceLevel.CRUSH:
+                    other_id = key[1] if key[0] == student.student_id else key[0]
+                    for s in self.students:
+                        if s.student_id == other_id:
+                            crush_name = s.name
+                            break
+                    break
+
+            entry = generate_prospective_entry(
+                student, self.clock.day, self.clock.tick,
+                crush_name=crush_name,
+            )
+            if entry:
+                student.journal.append(entry)
+
         return log
 
     def _report_card(self) -> list[str]:
         """Issue report cards for all students. Returns log messages."""
+        from .journal import generate_grade_milestone_entry
+
         log: list[str] = []
         log.append("REPORT CARDS are in!")
 

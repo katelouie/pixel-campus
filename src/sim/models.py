@@ -158,8 +158,8 @@ class Student:
     # Thoughts (mood modifiers with durations)
     thoughts: list[Thought] = field(default_factory=list)
 
-    # Journal
-    journal: list[tuple[int, str]] = field(default_factory=list)
+    # Journal (rich entries with timestamp and trigger metadata)
+    journal: list["JournalEntry"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.skills:
@@ -363,3 +363,49 @@ class Romance:
         """One side has feelings, the other is still platonic."""
         f1, f2 = self.feelings_1, self.feelings_2
         return (f1 > RomanceLevel.PLATONIC) != (f2 > RomanceLevel.PLATONIC)
+
+
+@dataclass
+class JournalEntry:
+    """A single journal entry with metadata for display and filtering.
+
+    Entries are generated at different points:
+    - start_of_day: prospective ("I hope Marcus is in the art room today")
+    - mid_day: event-triggered (friendship level-up, dating, conflict, etc.)
+    - end_of_day: retrospective (existing system, enhanced with trait voice)
+    """
+
+    text: str
+    day: int
+    tick: int             # school tick within day (0-84); used for time display
+    trigger: str          # "start_of_day", "end_of_day", "dating", "crush",
+                          # "friendship_levelup", "conflict", "match",
+                          # "grade_failed", "grade_improved", "encouraged",
+                          # "skill_milestone"
+
+    @property
+    def time_label(self) -> str:
+        """Human-readable time derived from tick, matching GameClock conventions.
+
+        tick 0 = 8:00 AM. 1 tick = 10 minutes.
+        """
+        minutes = self.tick * 10
+        hour = 8 + (minutes // 60)
+        minute = minutes % 60
+        period = "AM" if hour < 12 else "PM"
+        display_h = hour % 12
+        if display_h == 0:
+            display_h = 12
+        return f"{display_h}:{minute:02d} {period}"
+
+    @property
+    def period_label(self) -> str:
+        """Broad time-of-day label for compact display."""
+        hour = 8 + (self.tick * 10 // 60)
+        if hour < 12:
+            return "morning"
+        if hour < 15:
+            return "afternoon"
+        if hour < 18:
+            return "late afternoon"
+        return "evening"
