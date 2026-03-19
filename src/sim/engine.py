@@ -750,22 +750,12 @@ class GameState:
     # ------------------
 
     def save(self, path: str | Path) -> None:
-        # TODO: expand stub
-        data = {
-            "day": self.clock.day,
-            "tick": self.clock.tick,
-            "total_points": self.total_points,
-            "num_students": len(self.students),
-        }
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_text(json.dumps(data, indent=2))
+        """Save the full game state to a JSON file."""
+        from .serialization import save_game
+        save_game(self, path)
 
     @classmethod
     def load(cls, path: str | Path) -> "GameState":
-        # TODO: expand stub
-        data = json.loads(Path(path).read_text())
-        state = cls.new_game(num_students=data.get("num_students", 8))
-        state.clock.day = data.get("day", 1)
-        state.clock.tick = data.get("tick", 0)
-        state.total_points = data.get("total_points", 0)
-        return state
+        """Load a full game state from a JSON file."""
+        from .serialization import load_game
+        return load_game(path)

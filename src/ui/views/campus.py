@@ -320,7 +320,7 @@ class CampusView(arcade.View):
 
         # --- Selection mini-card (bottom-right, screen-space) ---
         from src.ui.hud import _make_nine_slice_texture, _make_banner_texture
-        _CARD_W, _CARD_H = 192, 284
+        _CARD_W, _CARD_H = 192, 316
         _CARD_MARGIN = 8
         _card_left   = self.window.width  - _CARD_W - _CARD_MARGIN
         _card_bottom = _CARD_MARGIN
@@ -330,39 +330,36 @@ class CampusView(arcade.View):
             self.window.width / 2, self.window.height / 2
         )
         card_panel_tex = _make_nine_slice_texture(_CARD_W, _CARD_H)
-        self._card_panel_sprite = arcade.Sprite(card_panel_tex)
-        self._card_panel_sprite.center_x = _card_left + _CARD_W // 2
-        self._card_panel_sprite.center_y = _card_bottom + _CARD_H // 2
 
-        # Portrait sprite — texture swapped on selection change
-        _empty_portrait = arcade.Texture(_PILImage.new("RGBA", (48, 96), (0, 0, 0, 0)))
-        self._card_portrait_sprite = arcade.Sprite(_empty_portrait, scale=1.5)
-        self._card_portrait_sprite.center_x = _card_left + _CARD_W // 2
-        # Portrait center: near top of card
-        self._card_portrait_sprite.center_y = _card_bottom + _CARD_H - 32 - 72
+        # Mini-card layout (all drawn as raw textures, no arcade.Sprite — avoids spatial hash)
+        from src.ui.font import FONT, FONT_DIM, FONT_HEADER
+        self._card_panel_tex = card_panel_tex
+        self._card_panel_rect = arcade.LRBT(_card_left, _card_left + _CARD_W,
+                                             _card_bottom, _card_bottom + _CARD_H)
 
-        # "View Profile" button banner
+        self._card_cx = _card_left + _CARD_W // 2
+        self._card_portrait_cy = _card_bottom + _CARD_H - 32 - 52
+        self._card_portrait_bottom = self._card_portrait_cy - 52
+
+        # Button layout
         _BTN_W = 128
         _btn_left   = _card_left + (_CARD_W - _BTN_W) // 2
-        _btn_bottom = _card_bottom + 32       # sits just inside bottom border
+        _btn_bottom = _card_bottom + 32
         _btn_top    = _btn_bottom + 32
-        btn_tex = _make_banner_texture(_BTN_W)
-        self._card_btn_sprite = arcade.Sprite(btn_tex)
-        self._card_btn_sprite.center_x = _btn_left + _BTN_W // 2
-        self._card_btn_sprite.center_y = (_btn_bottom + _btn_top) // 2
-        # Stored for click-hit testing (screen coords)
+        self._card_btn_tex = _make_banner_texture(_BTN_W)
+        self._card_btn_rect = arcade.LRBT(_btn_left, _btn_left + _BTN_W, _btn_bottom, _btn_top)
         self._card_btn_bounds = (_btn_left, _btn_left + _BTN_W, _btn_bottom, _btn_top)
+        self._card_btn_text_tex = FONT.get_texture("Profile")
 
-        # Mini-card bitmap text sprites (rebuilt on selection change)
-        from src.ui.font import FONT, FONT_DIM, FONT_HEADER
-        self._card_portrait_bottom = self._card_portrait_sprite.center_y - 72
-        self._card_cx = _card_left + _CARD_W // 2
-        self._card_text_sprites: list[arcade.Sprite] = []
-        # Static "Profile" button text
-        btn_tex = FONT.get_texture("Profile")
-        self._card_btn_sprite_text = arcade.Sprite(btn_tex)
-        self._card_btn_sprite_text.center_x = self._card_btn_sprite.center_x
-        self._card_btn_sprite_text.center_y = self._card_btn_sprite.center_y
+        # Portrait animation state
+        self._card_anim_frame: int = 0
+        self._card_anim_timer: int = 0
+        self._card_portrait_tex: arcade.Texture = arcade.Texture(
+            _PILImage.new("RGBA", (48, 96), (0, 0, 0, 0))
+        )
+
+        # Text textures (rebuilt per frame during draw)
+        self._card_text_draws: list[tuple[arcade.Texture, float, float]] = []  # (tex, cx, cy)
 
     # ------------------------------------------------------------------
     # Setup helpers
@@ -586,38 +583,70 @@ class CampusView(arcade.View):
             self._draw_context_menu()
 
     def _draw_selection_card(self) -> None:
-        """Draw the bottom-right mini info card for the selected student."""
+        """Draw the bottom-right mini info card for the selected student.
+
+        All drawing uses draw_texture_rect — no arcade.Sprite objects — to avoid
+        polluting the spatial hash and eating mouse events.
+        """
         sprite  = self._selected_sprite
         student = sprite.student
 
-        self._card_portrait_sprite.texture = sprite.idle_textures["down"]
+        # Animate portrait: cycle idle_anim frames
+        anim_frames = sprite.idle_anim_textures.get("down", [])
+        if anim_frames:
+            self._card_anim_timer += 1
+            if self._card_anim_timer >= 8:
+                self._card_anim_timer = 0
+                self._card_anim_frame = (self._card_anim_frame + 1) % len(anim_frames)
+            self._card_portrait_tex = anim_frames[self._card_anim_frame]
+        else:
+            self._card_portrait_tex = sprite.idle_textures["down"]
 
-        # Rebuild bitmap text sprites for current student
+        # Build text textures
         from src.ui.font import FONT, FONT_DIM, FONT_HEADER
-        self._card_text_sprites.clear()
         cx = self._card_cx
-        y = self._card_portrait_bottom - 8
+        line_h = FONT.char_height - 4
+        y = self._card_portrait_bottom - 26
 
-        def _centered(font, text, cy):
-            tex = font.get_texture(text)
-            sp = arcade.Sprite(tex)
-            sp.center_x = cx
-            sp.center_y = cy
-            return sp
+        text_draws: list[tuple[arcade.Texture, float, float]] = []
+        for font, text in (
+            (FONT_HEADER, student.name),
+            (FONT_DIM, student.mood.name.capitalize()),
+            (FONT_DIM, student.state.value.capitalize()),
+        ):
+            text_draws.append((font.get_texture(text), cx, y))
+            y -= line_h
 
-        self._card_text_sprites.append(_centered(FONT_HEADER, student.name, y))
-        y -= FONT.char_height
-        self._card_text_sprites.append(_centered(FONT_DIM, f"{student.mood.name.capitalize()}", y))
-        y -= FONT.char_height - 2
-        self._card_text_sprites.append(_centered(FONT_DIM, student.state.value.capitalize(), y))
+        # Portrait rect (scale 1.5: 72x144)
+        pw, ph = 72, 144
+        portrait_rect = arcade.LRBT(
+            cx - pw // 2, cx + pw // 2,
+            self._card_portrait_cy - ph // 2, self._card_portrait_cy + ph // 2,
+        )
+
+        # Button text rect (centered on button)
+        btn_tex = self._card_btn_text_tex
+        btn_cx = (self._card_btn_bounds[0] + self._card_btn_bounds[1]) // 2
+        btn_cy = (self._card_btn_bounds[2] + self._card_btn_bounds[3]) // 2
 
         with self._card_screen_cam.activate():
-            arcade.draw_sprite(self._card_panel_sprite)
-            arcade.draw_sprite(self._card_portrait_sprite)
-            arcade.draw_sprite(self._card_btn_sprite)
-            arcade.draw_sprite(self._card_btn_sprite_text)
-            for sp in self._card_text_sprites:
-                arcade.draw_sprite(sp)
+            # Panel background
+            arcade.draw_texture_rect(self._card_panel_tex, self._card_panel_rect)
+            # Portrait
+            arcade.draw_texture_rect(self._card_portrait_tex, portrait_rect)
+            # Button banner
+            arcade.draw_texture_rect(self._card_btn_tex, self._card_btn_rect)
+            # Button label
+            arcade.draw_texture_rect(btn_tex, arcade.LRBT(
+                btn_cx - btn_tex.width // 2, btn_cx + btn_tex.width // 2,
+                btn_cy - btn_tex.height // 2, btn_cy + btn_tex.height // 2,
+            ))
+            # Text lines
+            for tex, tx, ty in text_draws:
+                arcade.draw_texture_rect(tex, arcade.LRBT(
+                    tx - tex.width // 2, tx + tex.width // 2,
+                    ty - tex.height // 2, ty + tex.height // 2,
+                ))
 
     # ------------------------------------------------------------------
     # Context menu
@@ -921,6 +950,7 @@ class CampusView(arcade.View):
         zoom = self._camera.zoom
         world_x = (x - self.window.width  / 2) / zoom + self._camera.position[0]
         world_y = (y - self.window.height / 2) / zoom + self._camera.position[1]
+
         clicked = arcade.get_sprites_at_point((world_x, world_y), self._sprite_list)
         if clicked:
             self._selected_sprite = clicked[0]

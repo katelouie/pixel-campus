@@ -152,7 +152,8 @@ class StudentSprite(arcade.Sprite):
     def __init__(
         self, student: Student, textures: dict, scale: float = SPRITE_SCALE
     ) -> None:
-        super().__init__(textures["idle"]["down"], scale=scale)
+        super().__init__(textures["idle"]["down"], scale=scale,
+                         hit_box_algorithm=arcade.hitbox.algo_bounding_box)
         self.student = student
         self.idle_textures = textures["idle"]
         self.idle_anim_textures = textures["idle_anim"]

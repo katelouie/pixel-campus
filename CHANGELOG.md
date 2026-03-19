@@ -5,7 +5,74 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [Unreleased — 2026-03-18]
+
+### Added
+- **Journal system overhaul** — the journal is now the emotional core of the game.
+  - **JournalEntry dataclass** (`models.py`): promoted from `tuple[int, str]` to `JournalEntry(text, day, tick, trigger)` with `time_label` ("2:30 PM") and `period_label` ("afternoon") properties.
+  - **Trait-voiced entries** (`src/data/journal_templates.json`): all 15 traits voiced across 13 situations each (~500+ unique template strings). Templates live in a separate JSON data file — `journal.py` is pure logic. Each student sounds like themselves: Bookworm terse, Class Clown performatively casual, Anxious hedging, Rebel dismissive-but-honest.
+  - **Three generation modes** (`journal.py`): end-of-day retrospective (50% trait voice → thought-driven → generic mood → zodiac flavor), start-of-day prospective (50% chance, forward-looking), event-triggered mid-day (EventBus subscriber).
+  - **19 trigger types**: end_of_day, start_of_day, boring_day, dating, crush, friendship_levelup, conflict, match, grade_failed, grade_milestone, skill_milestone, jealous, encouraged, mood_happy, mood_sad, mood_crisis, loneliness, new_room, activity_fav/dread/neutral/improving.
+  - **Activity reflection** (~18% per activity completion): interacts with favorite/dreaded skill. "Art just poured out of me today" vs "Why am I doing academics. Why."
+  - **Mood threshold crossing**: fires journal entries when mood crosses happy (70+), sad (<35), or crisis (<20) thresholds. Crisis entries are trait-voiced ("My chest won't stop. My brain won't stop. Everything is spiraling." — Anxious).
+  - **Guaranteed minimum**: if a student has zero entries for the day, a trait-voiced "boring day" entry always fires. "Quiet day. Good." — Loner. "LITERALLY nothing happened today. I am so bored I could scream." — Social Butterfly.
+  - **Daily cap of 6** entries per student per day prevents any one student from flooding.
+  - **Frequency budget**: quiet days 1-2 entries, normal days 2-3, dramatic days 4-6. Average ~2.8 per student per day in testing.
+  - **Design doc**: `planning/journal_design.md`
+
+- **Profile view redesign** (`profile.py`): journal is now the primary interface.
+  - Journal occupies the right 2/3 of the panel, scrollable via mouse wheel, with "Day N — time" timestamps.
+  - Stats compressed into a left sidebar: portrait, identity, traits, needs bars, grades, thoughts.
+  - Traits displayed as teal "link" text with underlines; hover shows description in a tooltip with papernote-themed background.
+  - Need bars show full labels (Rest, Fun, Social, Academics, Creative, Athletics); numeric values appear on hover.
+  - Grade subjects use proper display names (PE stays uppercase).
+  - Relationship tab columns respaced; friendship affinity values appear on hover.
+  - All profile text uses pixel-perfect BitmapFont renderer.
+
+- **Unified hover tooltip system** (`profile.py`): traits, need bars, and relationship bars all share one tooltip renderer with cream background and brown border. Each hitbox tagged with its tab to prevent cross-tab phantom hovers.
+
+- **Bitmap font system** (`bitmap_font.py`, `font.py`): enhanced BitmapFont with word wrapping (`wrap_lines`, `get_wrapped_textures`), color parameter, shared font instances with named presets (FONT_HEADER, FONT_DIM, FONT_TIMESTAMP, FONT_JOURNAL, etc.).
+
+- **Global font configuration** (`src/ui/font.py`): single source of truth for game fonts. Change font/scale in one file to restyle the entire game (e.g., dyslexia-accessible font swap).
+
+- **Animated minicard portrait** (`campus.py`): selected student's portrait in the minicard now runs the idle animation loop at a gentle pace. The little bob is very cute.
+
+- **Student name labels below sprites** (`campus.py`): names now appear centered below each student sprite instead of above, with mood emoji removed for cleaner visual.
+
+- **Full save/load system** (`src/sim/serialization.py`): complete round-trip serialization of all game state.
+  - Students: needs, skills, grades (per-subject), thoughts, journal entries (all 19 trigger types preserved), personality (zodiac, preferences, romance interest), traits (saved by name, re-matched from data files on load).
+  - Friendships: level, affinity, history per pair.
+  - Romances: directed feelings + affinity per student per pair, history.
+  - Clock: day, tick, ticks_per_day.
+  - Game state: points, graduation target, weather.
+  - Rooms and traits NOT serialized — reloaded from data files. Trait balance changes in `traits.json` automatically apply to existing saves.
+  - Save format version 1 with migration field for future format changes.
+  - ~34KB for a 3-day/5-student game. Journal text is the bulk of the size (which is the good stuff).
+  - Loaded games continue correctly: JournalSubscriber re-wired, EventBus re-subscribed, social text reloaded, students dispatched on next tick.
+
+### Changed
+- **Minicard rendering** (`campus.py`): all minicard elements (panel, portrait, button, text) now drawn via `arcade.draw_texture_rect` instead of `arcade.Sprite` to avoid polluting arcade's global spatial hash, which was causing mouse event interception.
+- **Profile tab labels**: "MY FEELINGS"/"THEIR FEELINGS" shortened to "I FEEL"/"THEY FEEL".
+- **Student sprite hitbox** (`sprites.py`): switched to `algo_bounding_box` for full-rectangle click detection instead of the default detailed algorithm that traces non-transparent pixels (which made tiny clickable areas on pixel art characters).
+- Journal end-of-day generation probability raised from 60% to 70%.
+- Encourage action now fires a journal entry (80% probability) in addition to the mood thought.
+- Jealousy system now fires journal entries (45% probability) alongside jealousy thoughts.
+- Skill milestones (25/50/75) now fire journal entries (55% probability).
+
+### Fixed
+- **Critical: mouse event dispatch bug** (`main_arcade.py`): wrapping `Window.dispatch_event` with a pass-through function fixes a pyglet/arcade bug where mouse click events were silently dropped before reaching `on_mouse_press`. The wrapper is semantically a no-op (`def f(*a): return orig(*a)`) but changes the method binding in a way that bypasses whatever internal caching was filtering events. Cause unknown; fix is stable and zero-cost. Without this wrapper, ~70% of mouse clicks were silently lost.
+- **Sprite-as-text click interference**: bitmap font `arcade.Sprite` objects drawn in world space (name labels below students) were registering in arcade's global spatial hash and intercepting click detection even though they weren't in any `SpriteList`. Fix: world-space text labels use `arcade.Text` (which doesn't participate in hit testing); all other bitmap text uses `arcade.Sprite` safely (profile view, context menus) since those are screen-space overlays.
+- **Context menu draw_text performance warning**: all `arcade.draw_text()` calls replaced with pre-built `arcade.Text` objects or bitmap font sprites.
+- Introduce action now forces immediate conversation (`maybe_interact` + `maybe_romance` called directly).
+- Encourage action now adds +5 friendship affinity and checks for level-up threshold crossing.
+
+### Removed
+- Mood emoji floating above student sprites (replaced by name-below-sprite layout).
+- `draw_text` calls throughout UI (replaced with Text objects or bitmap font).
+
+---
+
+## [Previous Unreleased]
 
 ### Added
 - **Right-click context menu** (`campus.py`): select student A, right-click student B to get a social action menu.

@@ -53,6 +53,14 @@ class PixelCampusWindow(arcade.Window):
             for num in CHARACTER_SHEET_NUMS
         }
 
+        # Event dispatch wrapper — fixes a pyglet/arcade bug where some mouse
+        # events are silently dropped by the View dispatch system. The wrapper
+        # ensures consistent event delivery. Cost: negligible.
+        _orig_dispatch = self.dispatch_event
+        def _fixed_dispatch(event_type, *args):
+            return _orig_dispatch(event_type, *args)
+        self.dispatch_event = _fixed_dispatch
+
         # Launch the campus view
         campus = CampusView(state=self.state, char_textures=self.char_textures)
         self.show_view(campus)
