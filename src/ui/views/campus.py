@@ -289,6 +289,10 @@ class CampusView(arcade.View):
             top=map_h_px,
         )
 
+        # Store world bounds for minimap
+        self._world_w = map_w_px
+        self._world_h = map_h_px
+
         # --- Camera ---
         self._camera = arcade.Camera2D()
         # Start camera looking at the first spawn point
@@ -602,6 +606,7 @@ class CampusView(arcade.View):
                     border_width=2,
                 )
         self._hud.draw(self._state)
+        self._draw_minimap()
         if self._selected_sprite:
             self._draw_selection_card()
         if self._context_menu:
@@ -841,6 +846,81 @@ class CampusView(arcade.View):
     def _draw_student_labels(self) -> None:
         for sid in self._student_sprites:
             self._name_labels[sid].draw()
+
+    # ------------------------------------------------------------------
+    # Minimap
+    # ------------------------------------------------------------------
+
+    _MINIMAP_W = 160
+    _MINIMAP_H = 120
+    _MINIMAP_MARGIN = 8
+    _MINIMAP_BG = (20, 20, 30, 160)
+    _MINIMAP_BORDER = (100, 90, 75, 180)
+    _MINIMAP_VIEWPORT = (255, 255, 200, 80)
+
+    _MOOD_DOT_COLORS = {
+        "happy":   ( 80, 200, 100, 255),  # green
+        "neutral": (220, 190,  60, 255),  # warm yellow
+        "sad":     ( 80, 120, 200, 255),  # blue
+        "tired":   (140, 140, 140, 255),  # grey
+    }
+
+    def _draw_minimap(self) -> None:
+        """Draw a minimap in the top-right corner with mood-colored dots for students."""
+        w, h = self.window.width, self.window.height
+        mm_right = w - self._MINIMAP_MARGIN
+        mm_left = mm_right - self._MINIMAP_W
+        mm_top = h - 50  # below the HUD banner
+        mm_bottom = mm_top - self._MINIMAP_H
+
+        # Background
+        arcade.draw_lrbt_rectangle_filled(mm_left, mm_right, mm_bottom, mm_top, self._MINIMAP_BG)
+        arcade.draw_lrbt_rectangle_outline(mm_left, mm_right, mm_bottom, mm_top, self._MINIMAP_BORDER, 1)
+
+        # Scale factors: world coords → minimap coords
+        ww = self._world_w or 1
+        wh = self._world_h or 1
+        pad = 4  # inner padding
+        scale_x = (self._MINIMAP_W - pad * 2) / ww
+        scale_y = (self._MINIMAP_H - pad * 2) / wh
+
+        # Draw camera viewport rectangle
+        cam_cx, cam_cy = self._camera.position
+        vw = self.window.width / self._camera.zoom
+        vh = self.window.height / self._camera.zoom
+        vl = (cam_cx - vw / 2) * scale_x + mm_left + pad
+        vr = (cam_cx + vw / 2) * scale_x + mm_left + pad
+        vb = (cam_cy - vh / 2) * scale_y + mm_bottom + pad
+        vt = (cam_cy + vh / 2) * scale_y + mm_bottom + pad
+        # Clamp to minimap bounds
+        vl = max(mm_left + 1, min(mm_right - 1, vl))
+        vr = max(mm_left + 1, min(mm_right - 1, vr))
+        vb = max(mm_bottom + 1, min(mm_top - 1, vb))
+        vt = max(mm_bottom + 1, min(mm_top - 1, vt))
+        arcade.draw_lrbt_rectangle_outline(vl, vr, vb, vt, self._MINIMAP_VIEWPORT, 1)
+
+        # Draw student dots
+        selected_sid = self._selected_sprite.student.student_id if self._selected_sprite else -1
+
+        for sid, sprite in self._student_sprites.items():
+            student = sprite.student
+            mx = sprite.center_x * scale_x + mm_left + pad
+            my = sprite.center_y * scale_y + mm_bottom + pad
+
+            # Clamp to minimap
+            mx = max(mm_left + 2, min(mm_right - 2, mx))
+            my = max(mm_bottom + 2, min(mm_top - 2, my))
+
+            # Mood color
+            mood_key = student.mood.name.lower()
+            color = self._MOOD_DOT_COLORS.get(mood_key, (200, 200, 200, 255))
+
+            if sid == selected_sid:
+                # Selected: larger dot with ring
+                arcade.draw_circle_filled(mx, my, 4, color)
+                arcade.draw_circle_outline(mx, my, 6, (255, 255, 100, 200), 1)
+            else:
+                arcade.draw_circle_filled(mx, my, 3, color)
 
     # ------------------------------------------------------------------
     # Input

@@ -52,6 +52,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Friend-seeking + crush-seeking** (`behaviors.py`): students autonomously drift toward rooms where friends, crushes, or dating partners are present. Room scoring: primary need match (20) + secondary need (10) + social pull (best friend 15, close friend 10, friend 5, crush 12, dating partner 20) + random jitter. Creates visible clique formation — Hugo follows Jasper to every room in the school.
 
+- **Minimap** (`campus.py`): 160x120px semi-transparent overlay in the top-right corner.
+  - Mood-colored dots: green (happy), yellow (neutral), blue (sad), grey (tired). Glanceable emotional state for all students at once.
+  - Selected student highlighted with larger dot + yellow ring.
+  - Camera viewport outline shows what part of the map you're currently viewing.
+  - Drawn with primitives only (no sprites, no click interference).
+
 - **Student separation + spread spawning** (`campus.py`): students no longer overlap.
   - Spawn distribution: students spread in a circle around spawn points (radius 30px, 20px per ring) instead of piling on the same pixel.
   - Soft separation force: every frame, walking students closer than 28px gently push apart (1.2px/frame, scaled by overlap). Sitting students exempt. Boid-style separation — cheap, natural-looking, no hard collision needed.
