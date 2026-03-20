@@ -440,9 +440,18 @@ class CampusView(arcade.View):
             self._state.assign_student(student, room)
 
     def _build_student_sprites(self, char_textures: dict[int, dict]) -> None:
+        from src.ui.character_composer import composite_sprite_sheet, random_appearance
+        from src.ui.sprites import load_composited_character_textures
+
         for i, student in enumerate(self._state.students):
-            sheet_num = CHARACTER_SHEET_NUMS[i % len(CHARACTER_SHEET_NUMS)]
-            sprite = StudentSprite(student, char_textures[sheet_num])
+            # Generate unique appearance if student doesn't have one
+            if student.appearance is None:
+                student.appearance = random_appearance(student.student_id)
+
+            # Composite a unique spritesheet from appearance layers
+            pil_sheet = composite_sprite_sheet(student.appearance)
+            textures = load_composited_character_textures(pil_sheet)
+            sprite = StudentSprite(student, textures)
 
             # Spread students across spawn points; distribute in a circle if few spawn points
             sp = self._spawn_points[i % len(self._spawn_points)]
@@ -1044,10 +1053,16 @@ class CampusView(arcade.View):
             bl, br, bb, bt = self._card_btn_bounds
             if bl <= x <= br and bb <= y <= bt:
                 from src.ui.views.profile import ProfileView
+                from src.ui.character_composer import extract_portrait_texture
+                student = self._selected_sprite.student
+                if student.appearance:
+                    portrait_tex = extract_portrait_texture(student.appearance)
+                else:
+                    portrait_tex = self._selected_sprite.idle_textures["down"]
                 self.window.show_view(ProfileView(
                     self._state,
-                    self._selected_sprite.student,
-                    self._selected_sprite.idle_textures["down"],
+                    student,
+                    portrait_tex,
                     self,
                 ))
                 return

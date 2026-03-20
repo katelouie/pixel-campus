@@ -18,8 +18,8 @@ from typing import Any
 from .academics import Grade, Subject
 from .clock import GameClock
 from .models import (
-    Friendship, FriendshipLevel, Gender, JournalEntry, Romance,
-    RomanceLevel, Room, Skill, Student, StudentState, Year,
+    CharacterAppearance, Friendship, FriendshipLevel, Gender, JournalEntry,
+    Romance, RomanceLevel, Room, Skill, Student, StudentState, Year,
 )
 from .needs import Need, NeedType
 from .personality import (
@@ -117,6 +117,24 @@ def _personality_from_dict(d: dict) -> Personality:
     )
 
 
+def _appearance_to_dict(a: CharacterAppearance) -> dict:
+    return {
+        "body": a.body, "eyes": a.eyes,
+        "outfit": a.outfit, "outfit_color": a.outfit_color,
+        "hairstyle": a.hairstyle, "hair_color": a.hair_color,
+        "accessory": a.accessory, "accessory_color": a.accessory_color,
+    }
+
+
+def _appearance_from_dict(d: dict) -> CharacterAppearance:
+    return CharacterAppearance(
+        body=d["body"], eyes=d["eyes"],
+        outfit=d["outfit"], outfit_color=d["outfit_color"],
+        hairstyle=d["hairstyle"], hair_color=d["hair_color"],
+        accessory=d.get("accessory"), accessory_color=d.get("accessory_color"),
+    )
+
+
 def _journal_to_dict(j: JournalEntry) -> dict:
     return {
         "text": j.text,
@@ -145,6 +163,7 @@ def _student_to_dict(s: Student) -> dict:
         "gender": s.gender.value,
         "year": s.year.value,
         "personality": _personality_to_dict(s.personality) if s.personality else None,
+        "appearance": _appearance_to_dict(s.appearance) if s.appearance else None,
         "needs": {nt.value: _need_to_dict(n) for nt, n in s.needs.items()},
         "skills": {sk.value: val for sk, val in s.skills.items()},
         "traits": [t.name for t in s.traits],  # save trait NAMES, reload from data
@@ -187,6 +206,7 @@ def _student_from_dict(d: dict, trait_pool: list[Trait]) -> Student:
         gender=Gender(d["gender"]),
         year=Year(d["year"]),
         personality=_personality_from_dict(d["personality"]) if d.get("personality") else None,
+        appearance=_appearance_from_dict(d["appearance"]) if d.get("appearance") else None,
         needs=needs,
         skills=skills,
         traits=traits,

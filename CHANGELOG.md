@@ -58,6 +58,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Camera viewport outline shows what part of the map you're currently viewing.
   - Drawn with primitives only (no sprites, no click interference).
 
+- **Character generator** (`src/ui/character_composer.py`): every student now has a unique composited appearance.
+  - PIL alpha-composites 4-5 layered spritesheets (body → eyes → outfit → hairstyle → accessory) into one unified character sheet, identical in format to premade sheets.
+  - `CharacterAppearance` dataclass: body (9 skin tones), eyes (7 styles), hairstyle (29 styles × 7 colors), outfit (33 styles × 3-10 colors), optional accessories (19 styles — Backpack, Snapback, Beanie, Glasses, etc.). ~1.7 million unique combinations.
+  - 72ms per student to composite + slice. 10 students = <1 second at startup.
+  - Appearance seeded deterministically from student_id — stable across sessions. Serialized in save files.
+  - Asset catalog (`src/data/character_catalog.json`): auto-generated manifest of all component files, styles, and color variants.
+  - School-appropriate accessory filter: 25% chance, limited to Backpack, Snapback, Dino Snapback, Beanie, Glasses.
+  - `load_composited_character_textures()` in sprites.py accepts PIL image — same texture dict format, zero changes to StudentSprite animation system.
+  - **Composited portraits**: front-facing head portraits from the Modern UI portrait generator, same layering system (skin + eyes + hairstyle + accessory). 96×96 per frame, 10-frame talking animation.
+  - Profile view now shows the animated talking portrait instead of a static idle frame. The little head chats at you while you read their journal.
+
 - **Time-of-day autonomous behavior** (`behaviors.py`): morning people push through tiredness in the first half of the day (rest threshold 15 vs base 25), tire easily in the evening (threshold 35). Night owls opposite. Creates visible daily rhythms — early-risers active at 8am, night owls dragging until afternoon.
 
 - **Weather display in HUD** (`hud.py`): current weather now shown in the top banner: `Mon 9:35a | Sunny | Points: 0/800`. Weather was already simulated and affecting mood thoughts — now the player can see it.

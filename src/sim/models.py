@@ -133,6 +133,7 @@ class Student:
     gender: Gender = Gender.NON_BINARY
     year: Year = Year.FRESHMAN
     personality: Personality | None = None
+    appearance: "CharacterAppearance | None" = None
 
     # Needs system (replaces old mood_value + energy)
     needs: dict[NeedType, Need] = field(default_factory=create_default_needs)
@@ -363,6 +364,24 @@ class Romance:
         """One side has feelings, the other is still platonic."""
         f1, f2 = self.feelings_1, self.feelings_2
         return (f1 > RomanceLevel.PLATONIC) != (f2 > RomanceLevel.PLATONIC)
+
+
+@dataclass
+class CharacterAppearance:
+    """Visual identity of a student — composited from layered sprite components.
+
+    Each field is an integer index into the asset catalog. Stored on Student,
+    serialized in saves, used to composite the sprite sheet at game start.
+    """
+
+    body: int         # 1-9 (skin tone)
+    eyes: int         # 1-7 (eye style/color)
+    outfit: int       # 1-33 (clothing style)
+    outfit_color: int # 1-N (color variant, varies per outfit style)
+    hairstyle: int    # 1-29 (hair shape)
+    hair_color: int   # 1-7 (color variant)
+    accessory: int | None = None       # style number, or None for no accessory
+    accessory_color: int | None = None # color variant
 
 
 @dataclass

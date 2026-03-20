@@ -121,6 +121,18 @@ class ProfileView(arcade.View):
         self._portrait_tex = portrait_tex
         self._return_view  = return_view
 
+        # Animated portrait frames (talking animation, row 1 of portrait sheet)
+        self._portrait_frames: list[arcade.Texture] = []
+        self._portrait_anim_frame: int = 0
+        self._portrait_anim_timer: int = 0
+        if student.appearance:
+            from src.ui.character_composer import composite_portrait_sheet
+            sheet = composite_portrait_sheet(student.appearance)
+            _CELL = 96
+            for col in range(10):
+                frame_img = sheet.crop((col * _CELL, 0, (col+1) * _CELL, _CELL))
+                self._portrait_frames.append(arcade.Texture(frame_img))
+
         self._panel_tex    = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
         self._close_btn_tex = arcade.load_texture(_CLOSE_BTN_PATH)
         self._screen_cam   = arcade.Camera2D()
@@ -180,9 +192,12 @@ class ProfileView(arcade.View):
         self._panel_sprite.center_y = self._panel_bottom + _PANEL_H // 2
 
         # Portrait
-        self._portrait_sprite = arcade.Sprite(self._portrait_tex, scale=1.5)
+        # Portrait: 96x96 composited head portrait (or 48x96 idle fallback)
+        portrait_h = self._portrait_tex.height
+        scale = 1.0 if portrait_h == 96 else 1.5  # head portrait vs full-body fallback
+        self._portrait_sprite = arcade.Sprite(self._portrait_tex, scale=scale)
         self._portrait_sprite.center_x = il + 48
-        self._portrait_sprite.center_y = it - _TAB_H - 48
+        self._portrait_sprite.center_y = it - _TAB_H - 52
 
         # Close button (nudged down a few px)
         btn_cx = self._panel_left + _PANEL_W - 22
@@ -247,6 +262,13 @@ class ProfileView(arcade.View):
 
             if self._active_tab == "profile":
                 if self._portrait_sprite:
+                    # Animate talking portrait
+                    if self._portrait_frames:
+                        self._portrait_anim_timer += 1
+                        if self._portrait_anim_timer >= 6:  # gentle pace
+                            self._portrait_anim_timer = 0
+                            self._portrait_anim_frame = (self._portrait_anim_frame + 1) % len(self._portrait_frames)
+                        self._portrait_sprite.texture = self._portrait_frames[self._portrait_anim_frame]
                     arcade.draw_sprite(self._portrait_sprite)
                 for x1, x2, y1, y2, color in self._bar_rects:
                     arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)

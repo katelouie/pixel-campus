@@ -123,6 +123,48 @@ def load_premade_character_textures(sheet_num: int, char_base: str) -> dict:
     return {"idle": idle_static, "idle_anim": idle_anim, "run": run, "sit_a": sit_a, "sit_b": sit_b, "throw": throw}
 
 
+def load_composited_character_textures(pil_image: "PIL.Image.Image") -> dict:
+    """Load character textures from a composited PIL image (same format as premade sheets).
+
+    The PIL image should be 2688x1968 RGBA — identical to a premade character sheet.
+    Uses the same frame layout as load_premade_character_textures.
+    """
+    sheet = arcade.SpriteSheet(image=pil_image)
+
+    def row_frames(row: int, start_col: int, n: int) -> list[arcade.Texture]:
+        return [
+            sheet.get_texture(arcade.LBWH((start_col + i) * CHAR_W, row * CHAR_H, CHAR_W, CHAR_H))
+            for i in range(n)
+        ]
+
+    idle_static = {
+        direction: sheet.get_texture(arcade.LBWH(col * CHAR_W, 0, CHAR_W, CHAR_H))
+        for direction, col in _SHEET_DIR_COL.items()
+    }
+    idle_anim = {
+        direction: row_frames(1, col * FRAMES_PER_DIRECTION, FRAMES_PER_DIRECTION)
+        for direction, col in _SHEET_DIR_COL.items()
+    }
+    run = {
+        direction: row_frames(2, col * FRAMES_PER_DIRECTION, FRAMES_PER_DIRECTION)
+        for direction, col in _SHEET_DIR_COL.items()
+    }
+    sit_a = {
+        direction: row_frames(_SIT_ROW["a"], col * FRAMES_PER_DIRECTION, FRAMES_PER_DIRECTION)
+        for direction, col in _SIT_DIR_COL.items()
+    }
+    sit_b = {
+        direction: row_frames(_SIT_ROW["b"], col * FRAMES_PER_DIRECTION, FRAMES_PER_DIRECTION)
+        for direction, col in _SIT_DIR_COL.items()
+    }
+    throw = {
+        direction: row_frames(_THROW_ROW, col * THROW_FRAMES, THROW_FRAMES)
+        for direction, col in _SHEET_DIR_COL.items()
+    }
+
+    return {"idle": idle_static, "idle_anim": idle_anim, "run": run, "sit_a": sit_a, "sit_b": sit_b, "throw": throw}
+
+
 def build_room_sprites(
     sheet: arcade.SpriteSheet,
     floor_col: int,
