@@ -30,7 +30,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Game flow refactor**: Window no longer creates GameState or loads premade textures at startup. Flow is now Title → Landing → Character Creator → Campus. Premade character sheet loading removed entirely (compositor handles all characters). `CampusView.char_textures` parameter made optional and unused.
 
+- **Time & weather icons** (`hud.py`): parsed from the "UI assets pack 2" sprite sheet. 15 icons total — 6 time-of-day (dawn through night) + 3 weather conditions (cloudy, storm, rain) × 3 time variants each. Displayed at native 48×48 in the top-right, just left of the minimap. Hover tooltip shows weather + time phase label. Sunny/windy/snow use the clear-sky time icons; cloudy/rain/storm use the weather-specific variants.
+
+- **Details tab** on student profile: new third tab showing skills (colored bars with favorite/dreaded indicators) and personality preferences (zodiac, music, movies, time, weather, worldview, attraction).
+
+- **Animated talking heads on Relationships tab**: each relationship row now shows a 44×44 animated portrait of the other student, cycling through the 10-frame talking animation. Composited from the portrait generator at tab build time.
+
 ### Changed
+- **Minimap position**: moved from below HUD banner to top-right corner of screen.
+- **Profile tab strip**: tab widths now responsive to label length + padding instead of fixed 110px.
+- **Relationships tab layout**: rows expanded to fit portrait heads, columns shifted right to accommodate. All 9 students fit with 50px row height.
 - **Bitmap font left-padding**: added `scale` pixels of transparent left padding to prevent first-character clipping from sub-pixel GL_NEAREST alignment.
 - **UI hover/selection colors**: replaced dark-bg + white-text pattern with lighter-bg + dark-text across all views (title, landing, character creator). Selected tags use soft green bg with border. Improves readability with the 5×12 bitmap font.
 - **Accessory compositor**: now handles palette-mode PNGs (Zombie Brain) and oversized sheets (Party Cone) gracefully via `.convert("RGBA")` and size-matching crop.

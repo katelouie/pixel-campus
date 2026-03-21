@@ -877,7 +877,7 @@ class CampusView(arcade.View):
         w, h = self.window.width, self.window.height
         mm_right = w - self._MINIMAP_MARGIN
         mm_left = mm_right - self._MINIMAP_W
-        mm_top = h - 50  # below the HUD banner
+        mm_top = h - 8  # top-right corner
         mm_bottom = mm_top - self._MINIMAP_H
 
         # Background
@@ -965,6 +965,9 @@ class CampusView(arcade.View):
 
     def on_key_release(self, symbol: int, modifiers: int) -> None:
         self._camera_keys.discard(symbol)
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int) -> None:
+        self._hud.check_icon_hover(x, y)
 
     def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int) -> None:
         from src.ui.hud import _PANEL_W, _PANEL_H

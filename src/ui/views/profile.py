@@ -173,6 +173,15 @@ class ProfileView(arcade.View):
         self._rel_sprites: list[arcade.Sprite] = []
         self._rel_bar_rects: list[tuple] = []
         self._rel_lines: list[tuple] = []
+        # Animated portrait heads for relationship rows
+        self._rel_portraits: list[tuple[list[arcade.Texture], float, float]] = []  # (frames, cx, cy)
+        self._rel_anim_frame: int = 0
+        self._rel_anim_timer: int = 0
+
+        # Details tab
+        self._det_sprites: list[arcade.Sprite] = []
+        self._det_bar_rects: list[tuple] = []
+        self._det_lines: list[tuple] = []
 
         # Close button
         self._close_btn: arcade.Sprite | None = None
@@ -216,18 +225,21 @@ class ProfileView(arcade.View):
         self._close_x_sprite.center_x = btn_cx
         self._close_x_sprite.center_y = btn_cy
 
-        # Tab strip
+        # Tab strip (width based on label length + padding)
         tab_y = it - _TAB_H // 2
-        tab_w = 110
         tab_x = il
-        for name, label in (("profile", "Profile"), ("relationships", "Relationships")):
+        tab_pad = 24  # horizontal padding inside each tab
+        tab_gap = 10  # space between tabs
+        for name, label in (("profile", "Profile"), ("relationships", "Relationships"), ("details", "Details")):
+            label_tex = FONT_HEADER.get_texture(label)
+            tab_w = label_tex.width + tab_pad
             self._tab_rects[name] = (tab_x, tab_y - 10, tab_x + tab_w, tab_y + 10)
-            active_sp = _bmp_sprite(FONT_HEADER, label, tab_x + 10, tab_y + _LH // 2)
+            active_sp = _bmp_sprite(FONT_HEADER, label, tab_x + tab_pad // 2, tab_y + _LH // 2)
             inactive_sp = _bmp_sprite(
-                BitmapFont(scale=2, color=_TAB_INACTIVE_COLOR), label, tab_x + 10, tab_y + _LH // 2,
+                BitmapFont(scale=2, color=_TAB_INACTIVE_COLOR), label, tab_x + tab_pad // 2, tab_y + _LH // 2,
             )
             self._tab_sprites[name] = {"active": active_sp, "inactive": inactive_sp}
-            tab_x += tab_w + 8
+            tab_x += tab_w + tab_gap
 
         # Journal area bounds
         ct = it - _TAB_H
@@ -240,9 +252,11 @@ class ProfileView(arcade.View):
         self._sidebar_sprites.clear(); self._bar_rects.clear(); self._lines.clear()
         self._hover_hitboxes.clear()
         self._rel_sprites.clear(); self._rel_bar_rects.clear(); self._rel_lines.clear()
+        self._det_sprites.clear(); self._det_bar_rects.clear(); self._det_lines.clear()
         self._build_sidebar(il, it)
         self._rebuild_journal()
         self._build_relationships_tab(il, it)
+        self._build_details_tab(il, it)
 
     def on_draw(self) -> None:
         self._return_view.on_draw()
@@ -290,7 +304,19 @@ class ProfileView(arcade.View):
                     arcade.draw_line(x1, y1, x2, y2, color, 1)
                 for sp in self._journal_sprites:
                     arcade.draw_sprite(sp)
-            else:
+            elif self._active_tab == "relationships":
+                # Animate talking head portraits
+                self._rel_anim_timer += 1
+                if self._rel_anim_timer >= 8:
+                    self._rel_anim_timer = 0
+                    self._rel_anim_frame = (self._rel_anim_frame + 1) % 10
+                for frames, pcx, pcy in self._rel_portraits:
+                    if frames:
+                        frame_idx = self._rel_anim_frame % len(frames)
+                        arcade.draw_texture_rect(
+                            frames[frame_idx],
+                            arcade.XYWH(pcx, pcy, 44, 44),
+                        )
                 for x1, x2, y1, y2, color in self._rel_bar_rects:
                     arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)
                 for x1, y1, x2, y2, color in self._rel_lines:
@@ -298,6 +324,22 @@ class ProfileView(arcade.View):
                 for sp in self._rel_sprites:
                     arcade.draw_sprite(sp)
                 # Hover tooltip on relationships tab too
+                if self._hover_active and self._hover_bg:
+                    bx1, bx2, by1, by2, bg_color = self._hover_bg
+                    arcade.draw_lrbt_rectangle_filled(bx1, bx2, by1, by2, bg_color)
+                    if self._hover_border:
+                        ox1, ox2, oy1, oy2, border_color = self._hover_border
+                        arcade.draw_lrbt_rectangle_outline(ox1, ox2, oy1, oy2, border_color, 2)
+                    for sp in self._hover_sprites:
+                        arcade.draw_sprite(sp)
+
+            elif self._active_tab == "details":
+                for x1, x2, y1, y2, color in self._det_bar_rects:
+                    arcade.draw_lrbt_rectangle_filled(x1, x2, y1, y2, color)
+                for x1, y1, x2, y2, color in self._det_lines:
+                    arcade.draw_line(x1, y1, x2, y2, color, 1)
+                for sp in self._det_sprites:
+                    arcade.draw_sprite(sp)
                 if self._hover_active and self._hover_bg:
                     bx1, bx2, by1, by2, bg_color = self._hover_bg
                     arcade.draw_lrbt_rectangle_filled(bx1, bx2, by1, by2, bg_color)
@@ -639,14 +681,21 @@ class ProfileView(arcade.View):
         ib  = self._panel_bottom + _BORDER
         sid = s.student_id
 
+        from src.ui.character_composer import composite_portrait_sheet
+
         inner_w = _PANEL_W - _BORDER * 2
-        col_name   = il + 10
-        col_friend = il + 120
-        col_bar    = il + 280
-        col_rom_me = il + 380
-        col_rom_them = il + 520
-        col_status = il + 660
+        portrait_size = 44  # display size for talking heads
+        _CELL = 96  # native portrait cell size
+        col_portrait = il + 4
+        col_name   = il + portrait_size + 14
+        col_friend = il + portrait_size + 120
+        col_bar    = il + portrait_size + 270
+        col_rom_me = il + portrait_size + 370
+        col_rom_them = il + portrait_size + 500
+        col_status = il + portrait_size + 640
         bar_w = 60
+
+        self._rel_portraits.clear()
 
         self._add_rel_sp(FONT_HEADER, "RELATIONSHIPS", il, ct)
         self._rel_lines.append((il, ct - _LH + 4, il + inner_w, ct - _LH + 4, (140, 120, 90, 180)))
@@ -680,10 +729,8 @@ class ProfileView(arcade.View):
 
         others.sort(key=_sort_key)
 
-        row_h = _LH + 2
+        row_h = portrait_size + 6  # row height = portrait + padding
         for other in others:
-            if y - row_h < ib + 8:
-                break
             key = (min(sid, other.student_id), max(sid, other.student_id))
             fri = self._state.friendships.get(key)
             rom = self._state.romances.get(key)
@@ -692,18 +739,31 @@ class ProfileView(arcade.View):
             fri_affinity = fri.affinity if fri else 0
             fri_color    = _FRIENDSHIP_COLORS.get(fri_level, COLOR_DIM)
 
-            self._add_rel_sp(FONT, other.name, col_name, y)
+            # Build talking head frames for this student
+            if other.appearance:
+                sheet = composite_portrait_sheet(other.appearance)
+                frames = []
+                for fc in range(10):
+                    frame_img = sheet.crop((fc * _CELL, 0, (fc + 1) * _CELL, _CELL))
+                    frames.append(arcade.Texture(frame_img))
+                portrait_cx = col_portrait + portrait_size // 2
+                portrait_cy = y - portrait_size // 2
+                self._rel_portraits.append((frames, portrait_cx, portrait_cy))
+
+            # Text baseline aligned to portrait center
+            text_y = y - portrait_size // 2 + _LH // 2
+
+            self._add_rel_sp(FONT, other.name, col_name, text_y)
 
             fri_label = fri_level.name.replace("_", " ").title()
-            self._rel_sprites.append(_bmp_sprite(FONT, fri_label, col_friend, y, fri_color))
+            self._rel_sprites.append(_bmp_sprite(FONT, fri_label, col_friend, text_y, fri_color))
 
-            # Friendship bar (shifted right of label, with hover for value)
-            cy = y - _LH // 2
+            # Friendship bar
+            cy = text_y - _LH // 2
             self._rel_bar_rects.append((col_bar, col_bar + bar_w, cy - 4, cy + 4, _BAR_BG))
             fill = int(bar_w * min(100, fri_affinity) / 100)
             if fill > 0:
                 self._rel_bar_rects.append((col_bar, col_bar + fill, cy - 4, cy + 4, fri_color))
-            # Hover hitbox → shows affinity number
             self._hover_hitboxes.append((
                 col_bar, cy - 6, col_bar + bar_w, cy + 6,
                 f"{fri_label}: {fri_affinity}/100", "above", "relationships",
@@ -717,29 +777,127 @@ class ProfileView(arcade.View):
 
                 if my_feelings != RomanceLevel.PLATONIC:
                     self._rel_sprites.append(
-                        _bmp_sprite(FONT, my_feelings.name.title(), col_rom_me, y, my_color)
+                        _bmp_sprite(FONT, my_feelings.name.title(), col_rom_me, text_y, my_color)
                     )
                 if their_feelings != RomanceLevel.PLATONIC:
                     self._rel_sprites.append(
-                        _bmp_sprite(FONT, their_feelings.name.title(), col_rom_them, y, their_color)
+                        _bmp_sprite(FONT, their_feelings.name.title(), col_rom_them, text_y, their_color)
                     )
 
                 if rom.is_dating:
                     self._rel_sprites.append(
-                        _bmp_sprite(FONT, "Dating!", col_status, y, (210, 50, 90, 255))
+                        _bmp_sprite(FONT, "Dating!", col_status, text_y, (210, 50, 90, 255))
                     )
                 elif rom.is_mutual_crush:
                     self._rel_sprites.append(
-                        _bmp_sprite(FONT, "Mutual crush", col_status, y, (220, 100, 140, 255))
+                        _bmp_sprite(FONT, "Mutual crush", col_status, text_y, (220, 100, 140, 255))
                     )
                 elif rom.is_unrequited:
                     crusher_id = sid if my_feelings > RomanceLevel.PLATONIC else other.student_id
                     label = "I like them" if crusher_id == sid else "They like me"
                     self._rel_sprites.append(
-                        _bmp_sprite(FONT, label, col_status, y, (180, 120, 140, 200))
+                        _bmp_sprite(FONT, label, col_status, text_y, (180, 120, 140, 200))
                     )
 
             y -= row_h
 
         if not others:
             self._add_rel_sp(FONT_DIM, "No other students.", il, y)
+
+    # ------------------------------------------------------------------
+    # Details tab
+    # ------------------------------------------------------------------
+
+    _SKILL_COLORS: dict[str, tuple] = {
+        "academics":  ( 60, 179, 113, 255),
+        "athletics":  (255, 140,   0, 255),
+        "creativity": (147, 112, 219, 255),
+        "social":     (219, 112, 147, 255),
+        "music":      ( 70, 130, 180, 255),
+    }
+
+    def _add_det_sp(self, font: BitmapFont, text: str, x: float, y: float,
+                    color: tuple | None = None) -> None:
+        self._det_sprites.append(_bmp_sprite(font, text, x, y, color))
+
+    def _build_details_tab(self, il: float, it: float) -> None:
+        """Build the details tab: skills, preferences, attraction."""
+        s = self._student
+        ct = it - _TAB_H
+        y = ct - 8
+        content_w = _PANEL_W - _BORDER * 2
+
+        # ── Skills ─────────────────────────────────────────────────
+        self._add_det_sp(FONT_HEADER, "SKILLS", il, y)
+        self._det_lines.append((il, y - _LH + 4, il + 160, y - _LH + 4, (140, 120, 90, 180)))
+        y -= _LH + 4
+
+        # Core skills only (not party/protest/flirt — those are hidden mechanics)
+        _DISPLAY_SKILLS = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
+        fav = s.favorite_skill
+        dread = s.dreaded_skill
+        label_w = 120
+        bar_w = 140
+        bar_h = 12
+        skill_spacing = 22
+
+        for skill in _DISPLAY_SKILLS:
+            val = s.skills.get(skill, 0.0)
+            label = skill.value.capitalize()
+            color = self._SKILL_COLORS.get(skill.value, COLOR_LABEL)
+
+            self._add_det_sp(FONT, label, il, y)
+
+            # Bar
+            bar_x = il + label_w
+            cy = y - _LH // 2
+            self._det_bar_rects.append((bar_x, bar_x + bar_w, cy - bar_h // 2, cy + bar_h // 2, _BAR_BG))
+            fill = int(bar_w * max(0.0, min(100.0, val)) / 100.0)
+            if fill > 0:
+                self._det_bar_rects.append((bar_x, bar_x + fill, cy - bar_h // 2, cy + bar_h // 2, color))
+
+            # Value text right of bar
+            val_x = bar_x + bar_w + 8
+            self._det_sprites.append(
+                _bmp_sprite(FONT_DIM, f"{int(val)}", val_x, y)
+            )
+
+            # Favorite/dreaded indicator after the number
+            indicator_x = val_x + 40
+            if skill == fav:
+                self._add_det_sp(FONT, "(Fav)", indicator_x, y, (60, 140, 80, 255))
+            elif skill == dread:
+                self._add_det_sp(FONT_DIM, "(Weak)", indicator_x, y)
+
+            # Hover for skill description
+            self._hover_hitboxes.append((
+                bar_x, cy - bar_h // 2 - 2, bar_x + bar_w, cy + bar_h // 2 + 2,
+                f"{skill.value.capitalize()}: {int(val)}/100", "below", "details",
+            ))
+
+            y -= skill_spacing
+
+        y -= 10
+
+        # ── Preferences ───────────────────────────────────────────
+        self._add_det_sp(FONT_HEADER, "PREFERENCES", il, y)
+        self._det_lines.append((il, y - _LH + 4, il + 200, y - _LH + 4, (140, 120, 90, 180)))
+        y -= _LH + 4
+
+        if s.personality:
+            p = s.personality
+            prefs = [
+                ("Zodiac", p.zodiac.value.capitalize()),
+                ("Music", p.music_genre.value.replace("_", " ").replace("r and b", "R&B").title()),
+                ("Movies", p.movie_genre.value.replace("_", " ").title()),
+                ("Time", p.time_of_day.value.capitalize()),
+                ("Weather", p.weather.value.capitalize()),
+                ("Worldview", p.worldview.value.capitalize()),
+                ("Attracted", fmt_romance_interests(p.romance_interest)),
+            ]
+            for label, value in prefs:
+                self._add_det_sp(FONT_DIM, f"{label}:", il, y)
+                self._add_det_sp(FONT, value, il + 120, y)
+                y -= _LH
+        else:
+            self._add_det_sp(FONT_DIM, "No personality data.", il, y)

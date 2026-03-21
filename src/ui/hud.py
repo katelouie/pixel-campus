@@ -22,6 +22,14 @@ _BANNER_PATH = _PAPERNOTE / "UI_Papernote_Banner04.png"
 _TILE = 32
 _BITMAP_SCALE = 2  # change this to resize the log font (1 = tiny, 2 = normal, 3 = large)
 
+# Time & weather icon sheet
+_ICON_SHEET_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "assets/packs/UI assets pack 2/Time & weather.png"
+)
+_ICON_SIZE = 48  # each icon is 48x48 in the sheet
+_ICON_DISPLAY = 28  # display size in the HUD (scaled down to fit the banner)
+
 # Log panel (bottom-left, flush with screen corner)
 _PANEL_W = 608  # wide enough for comfortable reading
 _PANEL_H = 240
@@ -105,6 +113,69 @@ def _make_banner_texture(width: int) -> arcade.Texture:
     return arcade.Texture(panel)
 
 
+def _load_time_weather_icons() -> dict[str, arcade.Texture]:
+    """Parse the Time & Weather sprite sheet into named icon textures.
+
+    Returns a dict with keys like:
+      time_dawn, time_morning, time_afternoon, time_sunset, time_evening, time_night
+      weather_cloudy_morning, weather_cloudy_afternoon, weather_cloudy_night
+      weather_storm_morning, weather_storm_afternoon, weather_storm_night
+      weather_rain_morning, weather_rain_afternoon, weather_rain_night
+    """
+    sheet = _PILImage.open(_ICON_SHEET_PATH)
+    # Square-frame icons start at x=176, y=16 in the sheet
+    # Grid: 3 cols × 6 rows of 48×48 icons
+    # Row 0: empty frame (skip)
+    # Rows 1-2: time of day (6 icons wrapped)
+    # Rows 3-5: weather × time variant (cloudy, storm, rain × morning/afternoon/night)
+    ox, oy = 176, 16
+    s = _ICON_SIZE
+    icons = {}
+
+    time_names = ["dawn", "morning", "afternoon", "sunset", "evening", "night"]
+    idx = 0
+    for r in range(1, 3):
+        for c in range(3):
+            cell = sheet.crop((ox + c*s, oy + r*s, ox + (c+1)*s, oy + (r+1)*s))
+            icons[f"time_{time_names[idx]}"] = arcade.Texture(cell)
+            idx += 1
+
+    weather_types = ["cloudy", "storm", "rain"]
+    time_variants = ["morning", "afternoon", "night"]
+    for ri, weather in enumerate(weather_types):
+        for ci, tod in enumerate(time_variants):
+            cell = sheet.crop((ox + ci*s, 176 + ri*s, ox + (ci+1)*s, 176 + (ri+1)*s))
+            icons[f"weather_{weather}_{tod}"] = arcade.Texture(cell)
+
+    return icons
+
+
+def _tick_to_time_phase(tick: int) -> str:
+    """Map a game tick (0-84) to a time-of-day phase name."""
+    hour = 8 + (tick * 10 // 60)
+    if hour < 10:
+        return "dawn"
+    if hour < 12:
+        return "morning"
+    if hour < 15:
+        return "afternoon"
+    if hour < 17:
+        return "sunset"
+    if hour < 19:
+        return "evening"
+    return "night"
+
+
+def _tick_to_weather_col(tick: int) -> str:
+    """Map a game tick to a weather icon time variant (morning/afternoon/night)."""
+    hour = 8 + (tick * 10 // 60)
+    if hour < 13:
+        return "morning"
+    if hour < 18:
+        return "afternoon"
+    return "night"
+
+
 def _wrap(text: str, max_chars: int = _LOG_WRAP_CHARS) -> list[str]:
     """Word-wrap a message into lines of at most max_chars characters."""
     if len(text) <= max_chars:
@@ -158,6 +229,21 @@ class HUD:
         self._clock_sprite_list = arcade.SpriteList()
         self._clock_sprite_list.append(self._clock_sprite)
 
+        # Time & weather icons (native 48x48, top-right, left of minimap)
+        # Minimap is 160px wide with 8px margin from right edge
+        self._tw_icons = _load_time_weather_icons()
+        _minimap_left = screen_width - 8 - 160
+        self._icon_cx = _minimap_left - _ICON_SIZE // 2 - 8
+        self._icon_cy = screen_height - _ICON_SIZE // 2 - 8
+        self._icon_hover = False
+        self._icon_rect = (
+            self._icon_cx - _ICON_SIZE // 2,
+            self._icon_cy - _ICON_SIZE // 2,
+            self._icon_cx + _ICON_SIZE // 2,
+            self._icon_cy + _ICON_SIZE // 2,
+        )
+        self._weather_label = ""
+
         # --- Log panel (bottom-left, flush with screen corner) ---
         log_tex = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
         log_sprite = arcade.Sprite(log_tex)
@@ -189,6 +275,11 @@ class HUD:
             sprite = arcade.Sprite(_empty)
             self._msg_sprites.append(sprite)
             self._msg_sprite_list.append(sprite)
+
+    def check_icon_hover(self, x: int, y: int) -> None:
+        """Update hover state for the weather icon."""
+        ix1, iy1, ix2, iy2 = self._icon_rect
+        self._icon_hover = ix1 <= x <= ix2 and iy1 <= y <= iy2
 
     def set_student_names(self, names: set[str]) -> None:
         """Tell the HUD which names to highlight as clickable in the log."""
@@ -231,11 +322,55 @@ class HUD:
     def draw(self, state: GameState) -> None:
         """Update and draw all HUD elements."""
         with self._screen_camera.activate():
-            # Top bar + clock
+            # Top bar + clock + time/weather icon
             self._top_bar_list.draw()
-            weather_str = state.current_weather.value.capitalize()
+
+            # Pick the right icon for current time + weather
+            from src.sim.personality import Weather as _Weather
+            tick = state.clock.tick
+            weather = state.current_weather
+            time_phase = _tick_to_time_phase(tick)
+            if weather in (_Weather.SUNNY, _Weather.WINDY, _Weather.SNOW):
+                icon_key = f"time_{time_phase}"
+            else:
+                weather_name = {_Weather.CLOUDY: "cloudy", _Weather.RAIN: "rain",
+                                _Weather.STORM: "storm"}.get(weather, "cloudy")
+                icon_key = f"weather_{weather_name}_{_tick_to_weather_col(tick)}"
+
+            self._weather_label = f"{weather.value.capitalize()} - {time_phase.capitalize()}"
+
+            icon_tex = self._tw_icons.get(icon_key)
+            if icon_tex:
+                arcade.draw_texture_rect(
+                    icon_tex,
+                    arcade.XYWH(self._icon_cx, self._icon_cy, _ICON_SIZE, _ICON_SIZE),
+                )
+
+            # Hover tooltip for the weather icon
+            if self._icon_hover and self._weather_label:
+                _tip_font = BitmapFont(scale=1, color=(40, 30, 20, 255))
+                label_tex = _tip_font.get_texture(self._weather_label)
+                tip_x = self._icon_cx - label_tex.width // 2 - 4
+                tip_y = self._icon_cy - _ICON_SIZE // 2 - label_tex.height // 2 - 6
+                pad = 4
+                arcade.draw_lrbt_rectangle_filled(
+                    tip_x - pad, tip_x + label_tex.width + pad,
+                    tip_y - label_tex.height // 2 - pad, tip_y + label_tex.height // 2 + pad,
+                    (240, 230, 210, 230),
+                )
+                arcade.draw_lrbt_rectangle_outline(
+                    tip_x - pad, tip_x + label_tex.width + pad,
+                    tip_y - label_tex.height // 2 - pad, tip_y + label_tex.height // 2 + pad,
+                    (180, 165, 140, 200), border_width=1,
+                )
+                arcade.draw_texture_rect(
+                    label_tex,
+                    arcade.XYWH(tip_x + label_tex.width // 2, tip_y,
+                                label_tex.width, label_tex.height),
+                )
+
             clock_str = (
-                f"{state.clock.day_time_str}  |  {weather_str}  |  "
+                f"{state.clock.day_time_str}  |  "
                 f"Points: {state.total_points}/{state.graduation_target}"
             )
             clock_tex = self._font.get_texture(clock_str)
