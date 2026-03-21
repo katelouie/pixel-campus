@@ -63,11 +63,11 @@ class BitmapFont:
         if not text:
             return arcade.Texture(_PILImage.new("RGBA", (1, char_h), (0, 0, 0, 0)))
 
-        total_w = len(text) * (char_w + gap) - gap
+        total_w = len(text) * (char_w + gap) - gap + s  # +s padding on left to prevent clipping
         img = _PILImage.new("RGBA", (total_w, char_h), (0, 0, 0, 0))
         pixels = img.load()
 
-        x = 0
+        x = s  # start after left padding
         for ch in text:
             rows = self._data.get(ch, self._data.get("?", [0] * _CHAR_H))
             for row_i, mask in enumerate(rows):

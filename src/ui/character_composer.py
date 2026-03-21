@@ -126,7 +126,10 @@ def composite_sprite_sheet(appearance: CharacterAppearance) -> Image.Image:
     if appearance.accessory is not None and appearance.accessory_color is not None:
         acc_path = _sprite_path("Accessory", appearance.accessory, appearance.accessory_color)
         if acc_path.exists():
-            result.alpha_composite(Image.open(acc_path))
+            acc = Image.open(acc_path).convert("RGBA")
+            if acc.size[0] > _TARGET_W:
+                acc = acc.crop((0, 0, _TARGET_W, acc.size[1]))
+            result.alpha_composite(acc)
 
     return result
 
@@ -153,7 +156,11 @@ def composite_portrait_sheet(appearance: CharacterAppearance) -> Image.Image:
     if appearance.accessory is not None and appearance.accessory_color is not None:
         acc_path = _portrait_path("Accessory", appearance.accessory, appearance.accessory_color)
         if acc_path.exists():
-            result.alpha_composite(Image.open(acc_path))
+            acc = Image.open(acc_path).convert("RGBA")
+            # Crop to match if oversized
+            if acc.size != result.size:
+                acc = acc.crop((0, 0, result.size[0], result.size[1]))
+            result.alpha_composite(acc)
 
     return result
 

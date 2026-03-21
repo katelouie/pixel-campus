@@ -159,6 +159,7 @@ def _journal_from_dict(d: dict) -> JournalEntry:
 def _student_to_dict(s: Student) -> dict:
     return {
         "name": s.name,
+        "last_name": s.last_name,
         "student_id": s.student_id,
         "gender": s.gender.value,
         "year": s.year.value,
@@ -202,6 +203,7 @@ def _student_from_dict(d: dict, trait_pool: list[Trait]) -> Student:
 
     student = Student(
         name=d["name"],
+        last_name=d.get("last_name", ""),
         student_id=d["student_id"],
         gender=Gender(d["gender"]),
         year=Year(d["year"]),

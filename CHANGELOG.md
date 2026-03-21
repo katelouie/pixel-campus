@@ -5,6 +5,40 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased — 2026-03-21]
+
+### Added
+- **Title screen** (`views/title.py`): proper game entry point with "Pixel Campus" title and New Game / Load Game / Settings buttons. Papernote-themed panel. Load Game finds the most recent save file; Settings is placeholder for now.
+
+- **Pre-game landing screen** (`views/landing.py`): Avatar High-inspired roster view showing all 10 students in a 2×5 grid with idle sprites and names. Click a student to customize, "Start Game" to begin. Rebuilds previews when returning from the character creator.
+
+- **Character creator** (`views/character_creator.py`): full student customization panel.
+  - Animated 3x sprite preview on left, Randomize/Done buttons stacked below.
+  - Editable first/last name fields with click-to-activate text input, Tab between fields.
+  - Gender selector (Male / Female / Non-Binary) with left/right arrows.
+  - Zodiac sign selector (12 signs) with left/right arrows.
+  - Attraction toggle buttons (Boys / Girls / Enbies) — multi-select.
+  - Year displayed but not editable (preserves class distribution for graduation).
+  - Trait selection grid — pick 1-2 from 15 traits, exclusion logic grays out incompatible traits, 2-trait max enforced.
+  - Appearance selectors: Skin Tone (9), Eyes (7), Hairstyle (29 × 7 colors), Outfit (33 × variable colors), Accessory (19 styles + None × variable colors).
+  - All changes applied in-place on Done — name, traits, gender, zodiac, attraction, and appearance.
+
+- **Surname system**: every student now has a unique last name drawn from a diverse 48-surname pool (`names.json`).
+  - `Student.last_name` field + `full_name` property for convenient display.
+  - Profile view and minicard show full names; world-space labels stay first-name-only for readability.
+  - Serialized in saves with backward compatibility (old saves without surnames load fine).
+
+- **Game flow refactor**: Window no longer creates GameState or loads premade textures at startup. Flow is now Title → Landing → Character Creator → Campus. Premade character sheet loading removed entirely (compositor handles all characters). `CampusView.char_textures` parameter made optional and unused.
+
+### Changed
+- **Bitmap font left-padding**: added `scale` pixels of transparent left padding to prevent first-character clipping from sub-pixel GL_NEAREST alignment.
+- **UI hover/selection colors**: replaced dark-bg + white-text pattern with lighter-bg + dark-text across all views (title, landing, character creator). Selected tags use soft green bg with border. Improves readability with the 5×12 bitmap font.
+- **Accessory compositor**: now handles palette-mode PNGs (Zombie Brain) and oversized sheets (Party Cone) gracefully via `.convert("RGBA")` and size-matching crop.
+- **Background color**: replaced `DARK_SLATE_BLUE` with warm charcoal `(58, 55, 62)` across all views. Title text updated to light cream/warm gray for visibility on the dark bg.
+
+### Fixed
+- **Crush thought text**: "X likes me?!" was assigned to the person who *developed* the crush, not the person being crushed on. Changed to "Crushing on X" to match the actual game event (student A develops feelings for B → A gets the thought).
+
 ## [Unreleased — 2026-03-18]
 
 ### Added

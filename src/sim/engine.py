@@ -199,6 +199,7 @@ class GameState:
         _male_pool   = _names_data.get("male", []) + _names_data.get("unisex", [])
         _female_pool = _names_data.get("female", []) + _names_data.get("unisex", [])
         _nb_pool     = _names_data.get("male", []) + _names_data.get("female", []) + _names_data.get("unisex", [])
+        _surname_pool = _names_data.get("surnames", [])
 
         from .models import Gender as _Gender
         _genders = [random.choice(list(_Gender)) for _ in range(actual_num_students)]
@@ -221,10 +222,23 @@ class GameState:
         # Build the trait pool for random assignment
         available_traits = defs.traits if defs.traits else []
 
+        # Assign unique surnames
+        _used_surnames: set[str] = set()
+        surnames: list[str] = []
+        for _ in range(actual_num_students):
+            available = [s for s in _surname_pool if s not in _used_surnames]
+            if available:
+                surname = random.choice(available)
+                _used_surnames.add(surname)
+                surnames.append(surname)
+            else:
+                surnames.append("")
+
         students = []
-        for i, (name, gender) in enumerate(zip(names, _genders)):
+        for i, (name, surname, gender) in enumerate(zip(names, surnames, _genders)):
             student = Student(
                 name=name,
+                last_name=surname,
                 student_id=i,
                 gender=gender,
                 year=random.choice(list(Year)),

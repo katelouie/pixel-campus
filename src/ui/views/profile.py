@@ -402,7 +402,7 @@ class ProfileView(arcade.View):
         x = il + 100
         y = it - 8
 
-        self._add_sp(FONT_HEADER, s.name, x, y)
+        self._add_sp(FONT_HEADER, s.full_name, x, y)
         y -= _LH + 2
 
         # Year and age

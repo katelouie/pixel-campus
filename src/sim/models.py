@@ -129,7 +129,8 @@ class Student:
     """A single student in the simulation."""
 
     name: str
-    student_id: int
+    last_name: str = ""
+    student_id: int = 0
     gender: Gender = Gender.NON_BINARY
     year: Year = Year.FRESHMAN
     personality: Personality | None = None
@@ -236,6 +237,13 @@ class Student:
         if self.traits:
             return min(core_skills, key=lambda s: combined_skill_mult(self.traits, s.value))
         return random.Random(self.student_id + 1).choice(core_skills)
+
+    @property
+    def full_name(self) -> str:
+        """First + last name, or just first if no surname assigned."""
+        if self.last_name:
+            return f"{self.name} {self.last_name}"
+        return self.name
 
     @property
     def is_busy(self) -> bool:

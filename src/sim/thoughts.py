@@ -118,9 +118,9 @@ def thought_best_friend(friend_name: str) -> Thought:
 
 
 def thought_crush(crush_name: str) -> Thought:
-    """Romance reached crush level."""
+    """Romance reached crush level — the student has a crush on crush_name."""
     return Thought(
-        label=f"{crush_name} likes me?!",
+        label=f"Crushing on {crush_name}",
         mood_effect=8.0,
         duration_ticks=84,
         ticks_remaining=84,

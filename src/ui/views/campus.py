@@ -88,8 +88,6 @@ ZOOM_MIN = 0.3
 ZOOM_MAX = 3.0
 AUTO_RUN_INTERVAL = 12.0  # seconds between auto ticks
 
-# Premade character sheet numbers to use (1-20 available)
-CHARACTER_SHEET_NUMS: list[int] = list(range(1, 21))
 
 # _SIT_PREFIX_TO_ROOM is built dynamically from state.rooms in CampusView.__init__
 # (each Room has a sit_prefixes list loaded from rooms.json)
@@ -98,7 +96,7 @@ CHARACTER_SHEET_NUMS: list[int] = list(range(1, 21))
 class CampusView(arcade.View):
     """Main gameplay view showing the campus map with students."""
 
-    def __init__(self, state: GameState, char_textures: dict[str, dict]) -> None:
+    def __init__(self, state: GameState, char_textures: dict | None = None) -> None:
         super().__init__()
         self._state = state
 
@@ -252,7 +250,7 @@ class CampusView(arcade.View):
         self._sprite_list = arcade.SpriteList()
         self._name_labels: dict[int, arcade.Text] = {}
         # mood_labels removed — mood emoji no longer floats above sprites
-        self._build_student_sprites(char_textures)
+        self._build_student_sprites()
 
         # --- Activity bubbles ---
         self._bubble_textures = _load_bubble_textures()
@@ -439,7 +437,7 @@ class CampusView(arcade.View):
             room = random.choice(candidates)
             self._state.assign_student(student, room)
 
-    def _build_student_sprites(self, char_textures: dict[int, dict]) -> None:
+    def _build_student_sprites(self) -> None:
         from src.ui.character_composer import composite_sprite_sheet, random_appearance
         from src.ui.sprites import load_composited_character_textures
 
@@ -649,7 +647,7 @@ class CampusView(arcade.View):
 
         text_draws: list[tuple[arcade.Texture, float, float]] = []
         for font, text in (
-            (FONT_HEADER, student.name),
+            (FONT_HEADER, student.full_name),
             (FONT_DIM, student.mood.name.capitalize()),
             (FONT_DIM, student.state.value.capitalize()),
         ):
