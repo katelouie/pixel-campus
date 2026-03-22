@@ -244,6 +244,20 @@ class HUD:
         )
         self._weather_label = ""
 
+        # Events button (below the top bar, left side)
+        _evt_font = BitmapFont(scale=2, color=(40, 30, 20, 255))
+        self._evt_btn_tex = _evt_font.get_texture("Events")
+        _evt_w = 90
+        _evt_h = 28
+        self._evt_btn_rect = (
+            screen_width // 2 - _TOP_BAR_W // 2,
+            screen_height - _TOP_BAR_H - _evt_h - 4,
+            screen_width // 2 - _TOP_BAR_W // 2 + _evt_w,
+            screen_height - _TOP_BAR_H - 4,
+        )
+        self._evt_btn_hovered = False
+        self._countdown_font = BitmapFont(scale=1, color=(180, 60, 40, 255))
+
         # --- Log panel (bottom-left, flush with screen corner) ---
         log_tex = _make_nine_slice_texture(_PANEL_W, _PANEL_H)
         log_sprite = arcade.Sprite(log_tex)
@@ -277,9 +291,17 @@ class HUD:
             self._msg_sprite_list.append(sprite)
 
     def check_icon_hover(self, x: int, y: int) -> None:
-        """Update hover state for the weather icon."""
+        """Update hover state for the weather icon and events button."""
         ix1, iy1, ix2, iy2 = self._icon_rect
         self._icon_hover = ix1 <= x <= ix2 and iy1 <= y <= iy2
+
+        ex1, ey1, ex2, ey2 = self._evt_btn_rect
+        self._evt_btn_hovered = ex1 <= x <= ex2 and ey1 <= y <= ey2
+
+    def check_events_click(self, x: int, y: int) -> bool:
+        """Return True if the events button was clicked."""
+        ex1, ey1, ex2, ey2 = self._evt_btn_rect
+        return ex1 <= x <= ex2 and ey1 <= y <= ey2
 
     def set_student_names(self, names: set[str]) -> None:
         """Tell the HUD which names to highlight as clickable in the log."""
@@ -378,6 +400,26 @@ class HUD:
             self._clock_sprite.center_x = self._clock_cx
             self._clock_sprite.center_y = self._clock_cy
             self._clock_sprite_list.draw()
+
+            # Events button
+            ex1, ey1, ex2, ey2 = self._evt_btn_rect
+            evt_bg = (210, 200, 175, 245) if self._evt_btn_hovered else (235, 225, 205, 220)
+            arcade.draw_lrbt_rectangle_filled(ex1, ex2, ey1, ey2, evt_bg)
+            arcade.draw_lrbt_rectangle_outline(ex1, ex2, ey1, ey2, (180, 165, 140, 200), border_width=1)
+            arcade.draw_texture_rect(
+                self._evt_btn_tex,
+                arcade.XYWH((ex1 + ex2) / 2, (ey1 + ey2) / 2,
+                            self._evt_btn_tex.width, self._evt_btn_tex.height))
+
+            # Event countdown (right of the events button)
+            if state.scheduled_event:
+                days = state.scheduled_event.days_remaining
+                cd_text = f"{state.scheduled_event.event_name} in {days}d"
+                cd_tex = self._countdown_font.get_texture(cd_text)
+                arcade.draw_texture_rect(
+                    cd_tex,
+                    arcade.XYWH(ex2 + 8 + cd_tex.width // 2, (ey1 + ey2) / 2,
+                                cd_tex.width, cd_tex.height))
 
             # Log panel
             self._log_panel_list.draw()

@@ -19,7 +19,10 @@ from .academics import (
 from .behaviors import _autonomous_decision, process_student, send_to_room
 from .clock import TICKS_PER_DAY, GameClock
 from .defs import GameDefs, ScenarioConfig
-from .events import SchoolEvent, check_for_event, resolve_event
+from .events import (
+    SchoolEvent, ScheduledEvent, get_event_by_name,
+    resolve_party_event, resolve_standard_event, tick_scheduled_event,
+)
 from .game_events import GameEvent, GameEventBus, GameEventType
 from .journal import (
     JournalSubscriber,
@@ -121,6 +124,11 @@ class GameState:
     # Scenario configuration (drives game parameters)
     scenario: ScenarioConfig = field(default_factory=ScenarioConfig)
 
+    # Event system — player-driven scheduling
+    scheduled_event: ScheduledEvent | None = None
+    completed_events: set[str] = field(default_factory=set)
+    school_year: int = 1  # increments at each graduation
+
     # Event bus — reactive systems subscribe here at startup
     bus: GameEventBus = field(default_factory=GameEventBus)
 
@@ -132,6 +140,9 @@ class GameState:
 
     # Journal subscriber — set by new_game(), used for tick checks & activity hooks
     _journal_sub: Any = field(default=None, repr=False)
+
+    # Pending event — set when a countdown hits zero, consumed by UI to show results modal
+    _pending_event: SchoolEvent | None = field(default=None, repr=False)
 
     # Lunch tracking — reset each new day
     _lunch_dispatched: bool = False
@@ -339,11 +350,12 @@ class GameState:
         # Check for spontaneous social interactions
         self._process_social_encounters()
 
-        # Check for scheduled events
-        event = check_for_event(self)
-        if event:
-            event_messages = resolve_event(self, event)
-            self.tick_log.extend(event_messages)
+        # Check for scheduled event countdown (fires at start of day)
+        if self.clock.tick == 0 and self.scheduled_event is not None:
+            ready_event = tick_scheduled_event(self)
+            if ready_event:
+                # Event fires! Resolution handled by the UI layer (shows modal)
+                self._pending_event = ready_event
 
         # Journal tick checks (mood threshold, loneliness, new room)
         if self._journal_sub is not None:

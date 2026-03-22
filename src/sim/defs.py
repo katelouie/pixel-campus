@@ -58,10 +58,11 @@ def _load_events(path: Path) -> list[SchoolEvent]:
             SchoolEvent(
                 name=entry["name"],
                 required_skill=_skill_from_str(entry["required_skill"]),
-                skill_threshold=entry.get("skill_threshold", 30),
-                point_reward=entry.get("point_reward", 50),
-                point_penalty=entry.get("point_penalty", -10),
                 description=entry.get("description", ""),
+                point_cost=entry.get("point_cost", 30),
+                countdown_days=entry.get("countdown_days", 5),
+                team_threshold=entry.get("team_threshold", 200),
+                is_party=entry.get("is_party", False),
             )
         )
     return events

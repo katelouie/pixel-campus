@@ -596,6 +596,9 @@ class CampusView(arcade.View):
                 logs = self._state.tick()
                 self._hud.push_messages(logs)
                 self._sync_sprites_to_sim()
+                if self._state._pending_event:
+                    self._auto_run = False  # pause auto-run for event
+                    self._check_pending_event()
 
     def on_draw(self) -> None:
         self.clear()
@@ -872,6 +875,22 @@ class CampusView(arcade.View):
         "tired":   (140, 140, 140, 255),  # grey
     }
 
+    def _check_pending_event(self) -> None:
+        """If an event countdown just hit zero, show the results modal."""
+        event = self._state._pending_event
+        if not event:
+            return
+        self._state._pending_event = None
+
+        from src.sim.events import resolve_standard_event, resolve_party_event
+        if event.is_party:
+            results = resolve_party_event(self._state, event)
+        else:
+            results = resolve_standard_event(self._state, event)
+
+        from src.ui.views.event_results import EventResultsView
+        self.window.show_view(EventResultsView(results, self._state, self))
+
     def _draw_minimap(self) -> None:
         """Draw a minimap in the top-right corner with mood-colored dots for students."""
         w, h = self.window.width, self.window.height
@@ -946,12 +965,16 @@ class CampusView(arcade.View):
             logs = self._state.tick()
             self._hud.push_messages(logs)
             self._sync_sprites_to_sim()
+            self._check_pending_event()
         elif symbol == arcade.key.H:
             all_logs: list[str] = []
             for _ in range(6):
                 all_logs.extend(self._state.tick())
+                if self._state._pending_event:
+                    break  # stop ticking, event needs resolution
             self._hud.push_messages(all_logs)
             self._sync_sprites_to_sim()
+            self._check_pending_event()
         elif symbol == arcade.key.P:
             self._auto_run = not self._auto_run
             self._auto_run_timer = 0.0
@@ -1036,6 +1059,12 @@ class CampusView(arcade.View):
 
         if button != arcade.MOUSE_BUTTON_LEFT:
             return
+        # Check events button
+        if self._hud.check_events_click(x, y):
+            from src.ui.views.event_menu import EventMenuView
+            self.window.show_view(EventMenuView(self._state, self))
+            return
+
         # Check log panel for clickable student names
         from src.ui.hud import _PANEL_W, _PANEL_H
         if x <= _PANEL_W and y <= _PANEL_H:

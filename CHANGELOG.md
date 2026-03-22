@@ -36,6 +36,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Animated talking heads on Relationships tab**: each relationship row now shows a 44×44 animated portrait of the other student, cycling through the 10-frame talking animation. Composited from the portrait generator at tab build time.
 
+- **Event system revamp** — complete rewrite from auto-triggered to player-driven.
+  - 7 events: Basketball Game, Art Show, Finals Week, Science Fair, Talent Show, Prom, The Big Party.
+  - Player schedules events from the **Event Menu** (accessible via HUD button), paying a point cost.
+  - **Countdown system**: events fire after N days of preparation. Countdown shown in HUD.
+  - **Team-total resolution**: sum of all students' relevant skill vs threshold. Strong students carry the team.
+  - **The Big Party**: special event — choose a host student, invitations sent based on friendship, romance, traits, and compatibility. Accept/reject per student. Pass/fail based on 60% attendance.
+  - **Event Results Modal** (`views/event_results.py`): full-screen pass/fail display with team stats, MVP, per-student breakdown, or party attendance.
+  - **Event Menu** (`views/event_menu.py`): shows all events with status (Available/Scheduled/Completed), point costs, cancel with 50% refund, party host selection.
+  - Auto-run pauses when events fire. Graduation requires 5/7 events completed.
+  - `GameState` gains `scheduled_event`, `completed_events`, `school_year` fields, all serialized.
+
 ### Changed
 - **Minimap position**: moved from below HUD banner to top-right corner of screen.
 - **Profile tab strip**: tab widths now responsive to label length + padding instead of fixed 110px.

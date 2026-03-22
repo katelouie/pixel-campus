@@ -275,8 +275,19 @@ def _romance_from_dict(d: dict) -> Romance:
 
 def state_to_dict(state: "GameState") -> dict:
     """Serialize a GameState to a JSON-compatible dict."""
+    # Serialize scheduled event if any
+    sched_dict = None
+    if state.scheduled_event:
+        se = state.scheduled_event
+        sched_dict = {
+            "event_name": se.event_name,
+            "days_remaining": se.days_remaining,
+            "host_student_id": se.host_student_id,
+            "invitations": {str(k): v for k, v in se.invitations.items()},
+        }
+
     return {
-        "version": 1,  # save format version for future migration
+        "version": 2,  # save format version
         "clock": {
             "day": state.clock.day,
             "tick": state.clock.tick,
@@ -285,6 +296,9 @@ def state_to_dict(state: "GameState") -> dict:
         "total_points": state.total_points,
         "graduation_target": state.graduation_target,
         "current_weather": state.current_weather.value,
+        "school_year": state.school_year,
+        "completed_events": sorted(state.completed_events),
+        "scheduled_event": sched_dict,
         "students": [_student_to_dict(s) for s in state.students],
         "friendships": [_friendship_to_dict(f) for f in state.friendships.values()],
         "romances": [_romance_to_dict(r) for r in state.romances.values()],
@@ -332,6 +346,18 @@ def state_from_dict(data: dict) -> "GameState":
         r = _romance_from_dict(rd)
         romances[r.pair] = r
 
+    # Reconstruct scheduled event (if any)
+    from .events import ScheduledEvent
+    scheduled_event = None
+    sched_data = data.get("scheduled_event")
+    if sched_data:
+        scheduled_event = ScheduledEvent(
+            event_name=sched_data["event_name"],
+            days_remaining=sched_data["days_remaining"],
+            host_student_id=sched_data.get("host_student_id"),
+            invitations={int(k): v for k, v in sched_data.get("invitations", {}).items()},
+        )
+
     # Build the state
     state = GameState(
         clock=clock,
@@ -343,6 +369,9 @@ def state_from_dict(data: dict) -> "GameState":
         romances=romances,
         scenario=defs.scenario,
         current_weather=Weather(data.get("current_weather", "sunny")),
+        scheduled_event=scheduled_event,
+        completed_events=set(data.get("completed_events", [])),
+        school_year=data.get("school_year", 1),
     )
 
     # Wire the EventBus and JournalSubscriber (same as new_game does)

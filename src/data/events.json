@@ -2,37 +2,58 @@
   {
     "name": "Basketball Game",
     "required_skill": "athletics",
-    "skill_threshold": 35,
-    "point_reward": 60,
-    "point_penalty": -10,
-    "description": "The big game! Athletic students shine.",
-    "trigger": {"every_n_days": 7}
+    "description": "The big game! Get your athletes ready.",
+    "point_cost": 25,
+    "countdown_days": 5,
+    "team_threshold": 200
   },
   {
     "name": "Art Show",
     "required_skill": "creativity",
-    "skill_threshold": 30,
-    "point_reward": 50,
-    "point_penalty": -10,
-    "description": "Gallery night. Creative students get to show off.",
-    "trigger": {"every_n_days": 7}
+    "description": "Students display their best creative work.",
+    "point_cost": 25,
+    "countdown_days": 5,
+    "team_threshold": 200
   },
   {
     "name": "Finals Week",
     "required_skill": "academics",
-    "skill_threshold": 40,
-    "point_reward": 70,
-    "point_penalty": -10,
-    "description": "Finals are here! Hope everyone studied...",
-    "trigger": {"every_n_days": 7}
+    "description": "Cramming time. Hit the books!",
+    "point_cost": 30,
+    "countdown_days": 5,
+    "team_threshold": 250
+  },
+  {
+    "name": "Science Fair",
+    "required_skill": "academics",
+    "description": "Hypotheses, experiments, poster boards.",
+    "point_cost": 30,
+    "countdown_days": 5,
+    "team_threshold": 220
+  },
+  {
+    "name": "Talent Show",
+    "required_skill": "music",
+    "description": "Time to shine on stage.",
+    "point_cost": 25,
+    "countdown_days": 5,
+    "team_threshold": 180
   },
   {
     "name": "Prom",
     "required_skill": "social",
-    "skill_threshold": 25,
-    "point_reward": 80,
-    "point_penalty": -10,
-    "description": "The big dance! Social butterflies shine.",
-    "trigger": {"every_n_days": 7}
+    "description": "The social event of the year!",
+    "point_cost": 35,
+    "countdown_days": 5,
+    "team_threshold": 200
+  },
+  {
+    "name": "The Big Party",
+    "required_skill": "social",
+    "description": "Pick a host. Send invitations. Hope people show up.",
+    "point_cost": 20,
+    "countdown_days": 3,
+    "team_threshold": 0,
+    "is_party": true
   }
 ]
