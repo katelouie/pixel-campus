@@ -317,7 +317,7 @@ class CampusView(arcade.View):
         }
 
         # Auto-run
-        self._auto_run: bool = False
+        self._auto_run: bool = True
         self._auto_run_timer: float = 0.0
 
         # --- Selection mini-card (bottom-right, screen-space) ---
@@ -575,16 +575,16 @@ class CampusView(arcade.View):
                     anim.stop()
                     bubble.visible = False
 
-        # Camera panning with arrow keys
+        # Camera panning with arrow keys + WASD
         pan = CAMERA_SPEED / self._camera.zoom  # pan speed adjusts with zoom
         cx, cy = self._camera.position
-        if arcade.key.LEFT in self._camera_keys:
+        if arcade.key.LEFT in self._camera_keys or arcade.key.A in self._camera_keys:
             cx -= pan
-        if arcade.key.RIGHT in self._camera_keys:
+        if arcade.key.RIGHT in self._camera_keys or arcade.key.D in self._camera_keys:
             cx += pan
-        if arcade.key.UP in self._camera_keys:
+        if arcade.key.UP in self._camera_keys or arcade.key.W in self._camera_keys:
             cy += pan
-        if arcade.key.DOWN in self._camera_keys:
+        if arcade.key.DOWN in self._camera_keys or arcade.key.S in self._camera_keys:
             cy -= pan
         self._camera.position = arcade.Vec2(cx, cy)
 
