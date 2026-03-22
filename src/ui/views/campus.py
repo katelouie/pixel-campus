@@ -299,6 +299,13 @@ class CampusView(arcade.View):
             self._camera.position = arcade.Vec2(sx, sy)
         self._camera_keys: set[int] = set()
 
+        self._selected_sprite: StudentSprite | None = None
+        self._context_menu: dict | None = None  # {x, y, target, items}
+        # Initialise to None so first sync fires for all students
+        self._prev_destinations: dict[int, str | None] = {
+            s.student_id: None for s in self._state.students
+        }
+
         # --- Morning dispatch: send every student somewhere at startup ---
         self._dispatch_morning()
         self._sync_sprites_to_sim()
@@ -307,15 +314,8 @@ class CampusView(arcade.View):
         self._hud = HUD(self.window.width, self.window.height)
         self._hud.set_student_names({s.name for s in self._state.students})
         self._hud.push_messages(
-            ["Welcome to Pixel Campus! SPACE: tick | P: auto-run | +/-: zoom | arrows: pan"]
+            ["Welcome to Pixel Campus! SPACE: tick | P: auto-run | +/-: zoom | WASD: pan"]
         )
-
-        self._selected_sprite: StudentSprite | None = None
-        self._context_menu: dict | None = None  # {x, y, target, items}
-        # Initialise to None so first sync fires for all students
-        self._prev_destinations: dict[int, str | None] = {
-            s.student_id: None for s in self._state.students
-        }
 
         # Auto-run
         self._auto_run: bool = True
