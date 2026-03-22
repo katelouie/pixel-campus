@@ -91,6 +91,14 @@ See `planning/event_bus_design.md` for full design.
 - [x] **Friend-seeking + crush-seeking autonomous decisions** (`behaviors.py:_autonomous_decision`)
   Room scoring system: need satisfaction (20 primary/10 secondary) + social pull (best friend 15, close friend 10, friend 5, crush 12, dating 20) + random jitter. Students drift toward people they care about without sacrificing critical needs. Creates visible clique formation and crush-following behavior.
 
+- [ ] **Fight system** (`src/sim/fights.py` + `engine.py`)
+  Students can get into fights based on: incompatible traits, jealousy buildup, repeated chat conflicts,
+  low mood + provocation. Fights damage friendship affinity, create strong negative thoughts for both
+  participants (and witnesses), drain social/fun needs, and generate dramatic journal entries. Fights
+  could escalate (verbal → shoving → full fight) or be broken up by the player (right-click "Break it up").
+  Rebel and Class Clown more likely to instigate. Anxious and Empath more affected as witnesses.
+  Feeds into the rumor mill. The Big Drama Generator.
+
 - [ ] **Sprite mood tinting** (`campus.py:on_update`)
   Blue-grey tint for mood < 30, full brightness for mood > 75. Glanceable emotional state without clicking.
   → See `technical_implementation.md §3a`
@@ -101,8 +109,7 @@ See `planning/event_bus_design.md` for full design.
   → See `technical_implementation.md §2`, `design_philosophy.md §5`
 
 - [ ] **Day summary screen** (new `src/ui/views/day_summary.py`)
-  Pause between days with: highlights from today's log, 2-3 unresolved thread teasers ("Zoe still has a secret crush on Jake...").
-  The "one more day" hook.
+  Pause between days with: points gained (and why), weather, student activity summary, skill gains, relationship changes, conversations, notable events. The "one more day" hook.
   → See `technical_implementation.md §5b`
 
 ---
@@ -111,28 +118,17 @@ See `planning/event_bus_design.md` for full design.
 
 These belong together — they form a cohesive redesign of how events work, transforming the player from spectator to social architect.
 
-- [ ] **Two-tier event split** (`events.py` + `engine.py`)
-  - **Tier A — Scheduled Major Events** (Big Game, Art Show, Finals, Prom): player-initiated, cost points, have countdown timers, gate graduation. Player reads the stakes and decides if they're ready. `SchoolEvent` dataclass needs `cost`, `reward`, `player_scheduled` fields.
-  - **Tier B — Emergent Drama Events**: triggered automatically by social state (love triangles when three romance states align, clique formation, fight escalations). No cost, no player scheduling — just the sim getting interesting.
-  → See `clicky_design_thoughts.md §What This Changes About How I Think About Pixel Campus's Event System`
+- [x] **Player-driven event system** (`events.py` + `views/event_menu.py` + `views/event_results.py`)
+  Complete rewrite: 7 events, player schedules from menu, pays point cost, countdown timer, team-total resolution. The Big Party has special invitation mechanics. Event menu accessible from HUD. Results modal on completion.
+  → See `planning/events_revamp.md`
 
-- [ ] **Events as player investments** (`engine.py` + new events UI panel)
-  Events menu showing upcoming scheduled events with: name, description, cost, which skills matter. Player clicks "Schedule Art Show" to commit. Point cost enforces "I'm ready" feeling — not a purchase, a commitment. Countdown timer appears in HUD.
-  → See `clicky_design_thoughts.md §What the Avatar High Screenshots Taught Me`
+- [x] **Points as currency** — events cost points to schedule. Cancel for 50% refund.
 
-- [ ] **Graduation gated by events, not score**
-  Replace the `total_points >= graduation_target` check with: all four major events completed = graduation unlocked. Score becomes a performance rating, not a gate. Graduation becomes a *story completion* not a threshold cross.
-  → See `clicky_design_thoughts.md §Graduation Has to Be a Story Ending`
+- [ ] **Graduation ceremony + year cycling** (`views/graduation.py`)
+  Complete X/7 events → unlock graduation. Superlative slides from game data, senior archival to yearbook, year promotion, new freshman generation via character creator. Event completion resets for new year.
+  → See `planning/events_revamp.md`
 
-- [ ] **Class cycling on graduation** (`engine.py` + `models.py`)
-  When graduation triggers: SENIOR students graduate out, JUNIOR → SENIOR, SOPHOMORE → JUNIOR, FRESHMAN → SOPHOMORE. Generate N new freshmen to fill the gaps (reuse existing `generate_student()` logic). Advances the game forward one school year without resetting the whole simulation — existing relationships and history persist for returning students.
-
-- [ ] **Graduated student serialization** (`engine.py`)
-  Serialize each graduating `Student` dataclass (skills, grades, friendship affinities, romance states, traits, journal history) to `graduated/<name>_<year>.json` on graduation. Lays the groundwork for Pixel University import — your high school alumni arrive at college with full histories intact.
-
-- [ ] **Points as currency, not just score**
-  Events cost points. Player must budget: save up for expensive high-reward event, or spend now on cheaper one? Adds resource-management tension. Frame as "scheduling/committing" not "buying."
-  → See `clicky_design_thoughts.md §The Point Economy Needs a Second Purpose`
+- [ ] **Yearbook** — persistent archive of graduated classes. Viewable from title screen + campus HUD.
 
 - [ ] **Personality system wiring** (`behaviors.py:_autonomous_decision`)
   - [x] Weather preference: daily weather roll fires mood thoughts based on student preference match/mismatch/storm. (`engine.py:_end_of_day`)
@@ -203,9 +199,8 @@ These belong together — they form a cohesive redesign of how events work, tran
   Soft-track camera to selected student's position. Arrow keys temporarily override.
   → See `review_polish.md §5`
 
-- [ ] **Day/night visual treatment** (`campus.py:on_draw`)
-  Single full-screen color overlay shifting with time: morning warm → midday neutral → afternoon amber → night blue-purple.
-  One `draw_lrbt_rectangle_filled` call with time-varying RGBA. Massive atmosphere for minimal code.
+- [x] **Day/night visual treatment + seasons** (`campus.py:on_draw` + `clock.py`)
+  Fullscreen color overlay shifting with time of day AND season. Winter sunsets at 2pm, summer stays bright all day. 40-day school year: Fall → Winter → Spring → Summer. Weather weighted by season.
   → See `review_polish.md §10`
 
 - [ ] **Pulsing selection indicator** (`campus.py`)
@@ -215,6 +210,10 @@ These belong together — they form a cohesive redesign of how events work, tran
 - [ ] **Profile: relationship column wording**
   "MY FEELINGS" / "THEIR FEELINGS" → "How I feel" / "How they feel"
   → See `review_polish.md §11`
+
+- [x] **Animated talking heads on Relationships tab** — 44×44 portraits per row
+- [x] **Details tab on profile** — skills bars, personality preferences
+- [x] **Responsive tab widths** — tab strip sizes to label length
 
 - [ ] **Graduation epilogue + yearbook** (new view)
   CRPG-style ending slides — one per graduating senior. Portrait, two narrative sentences based on who they became (relationship states, grades, events attended, journal history). Fade to black between each slide.
@@ -284,8 +283,7 @@ These are good ideas that are a bigger scope shift. Track here, don't plan yet.
 - Scenario / mod system
 - Replay / history timeline
 - Relationship web visualization (graph view)
-- Minimap
 
 ---
 
-*Last updated: 2026-03-17. Audit source: `planning/audit/`.*
+*Last updated: 2026-03-21. Audit source: `planning/audit/`.*

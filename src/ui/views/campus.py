@@ -597,8 +597,11 @@ class CampusView(arcade.View):
                 self._hud.push_messages(logs)
                 self._sync_sprites_to_sim()
                 if self._state._pending_event:
-                    self._auto_run = False  # pause auto-run for event
+                    self._auto_run = False
                     self._check_pending_event()
+                elif self._state._day_summary:
+                    self._auto_run = False
+                    self._check_day_summary()
 
     def on_draw(self) -> None:
         self.clear()
@@ -615,6 +618,7 @@ class CampusView(arcade.View):
                     arcade.color.YELLOW,
                     border_width=2,
                 )
+        self._draw_daynight_overlay()
         self._hud.draw(self._state)
         self._draw_minimap()
         if self._selected_sprite:
@@ -875,6 +879,36 @@ class CampusView(arcade.View):
         "tired":   (140, 140, 140, 255),  # grey
     }
 
+    # Day/night color tints: (r, g, b, alpha) overlaid on the campus
+    _DAYNIGHT_COLORS = {
+        "dawn":      (255, 200, 120, 25),   # warm gold, very subtle
+        "morning":   (  0,   0,   0,  0),   # clear — no tint
+        "afternoon": (255, 180,  80, 18),   # warm amber, barely there
+        "sunset":    (255, 120,  50, 40),   # orange warmth
+        "evening":   ( 40,  30, 100, 55),   # blue-purple
+        "night":     ( 15,  10,  45, 80),   # deep night blue
+    }
+
+    def _draw_daynight_overlay(self) -> None:
+        """Draw a fullscreen color tint based on time of day."""
+        from src.ui.hud import _tick_to_time_phase
+        phase = _tick_to_time_phase(self._state.clock.tick, self._state.clock.season)
+        color = self._DAYNIGHT_COLORS.get(phase, (0, 0, 0, 0))
+        if color[3] > 0:
+            arcade.draw_lrbt_rectangle_filled(
+                0, self.window.width, 0, self.window.height, color,
+            )
+
+    def _check_day_summary(self) -> None:
+        """If a day just ended, show the summary card."""
+        summary = self._state._day_summary
+        if not summary:
+            return
+        self._state._day_summary = None
+
+        from src.ui.views.day_summary import DaySummaryView
+        self.window.show_view(DaySummaryView(summary, self))
+
     def _check_pending_event(self) -> None:
         """If an event countdown just hit zero, show the results modal."""
         event = self._state._pending_event
@@ -966,15 +1000,17 @@ class CampusView(arcade.View):
             self._hud.push_messages(logs)
             self._sync_sprites_to_sim()
             self._check_pending_event()
+            self._check_day_summary()
         elif symbol == arcade.key.H:
             all_logs: list[str] = []
             for _ in range(6):
                 all_logs.extend(self._state.tick())
-                if self._state._pending_event:
-                    break  # stop ticking, event needs resolution
+                if self._state._pending_event or self._state._day_summary:
+                    break  # stop ticking, needs UI attention
             self._hud.push_messages(all_logs)
             self._sync_sprites_to_sim()
             self._check_pending_event()
+            self._check_day_summary()
         elif symbol == arcade.key.P:
             self._auto_run = not self._auto_run
             self._auto_run_timer = 0.0

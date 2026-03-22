@@ -144,6 +144,12 @@ class GameState:
     # Pending event — set when a countdown hits zero, consumed by UI to show results modal
     _pending_event: SchoolEvent | None = field(default=None, repr=False)
 
+    # Day summary — populated at end of day, consumed by UI to show summary card
+    _day_summary: dict | None = field(default=None, repr=False)
+
+    # Skill snapshot — captured at day start for computing deltas
+    _skill_snapshot: dict[int, dict[str, float]] = field(default_factory=dict, repr=False)
+
     # Lunch tracking — reset each new day
     _lunch_dispatched: bool = False
 
@@ -591,14 +597,28 @@ class GameState:
         if self.total_points >= self.graduation_target:
             log.append("GRADUATION!! Your students made it!")
 
+        # Build day summary for the UI
+        self._day_summary = self._build_day_summary(day_points, log)
+
         self.bus.emit(GameEvent(
             GameEventType.DAY_ENDED,
             data={"day": self.clock.day, "points": day_points},
         ))
 
-        # Roll tomorrow's weather and log it
-        self.current_weather = random.choice(list(Weather))
-        log.append(f"Tomorrow: {self.current_weather.value}.")
+        # Roll tomorrow's weather (season-weighted)
+        from .clock import get_season
+        season = get_season(self.clock.day + 1)
+        _WEATHER_WEIGHTS: dict[str, dict[Weather, int]] = {
+            "fall":   {Weather.SUNNY: 3, Weather.CLOUDY: 4, Weather.RAIN: 3, Weather.WINDY: 2, Weather.STORM: 1, Weather.SNOW: 0},
+            "winter": {Weather.SUNNY: 2, Weather.CLOUDY: 4, Weather.RAIN: 3, Weather.WINDY: 2, Weather.STORM: 2, Weather.SNOW: 3},
+            "spring": {Weather.SUNNY: 5, Weather.CLOUDY: 3, Weather.RAIN: 2, Weather.WINDY: 1, Weather.STORM: 1, Weather.SNOW: 0},
+            "summer": {Weather.SUNNY: 6, Weather.CLOUDY: 2, Weather.RAIN: 1, Weather.WINDY: 1, Weather.STORM: 1, Weather.SNOW: 0},
+        }
+        weights = _WEATHER_WEIGHTS.get(season, {w: 1 for w in Weather})
+        weathers = list(weights.keys())
+        probs = [weights[w] for w in weathers]
+        self.current_weather = random.choices(weathers, weights=probs, k=1)[0]
+        log.append(f"Tomorrow: {self.current_weather.value} ({season}).")
 
         # Reset for new day
         sc = self.scenario
@@ -659,6 +679,12 @@ class GameState:
 
         log.append(f"Day {self.clock.day} begins! ({self.clock.time_str})")
 
+        # Snapshot skills for end-of-day delta computation
+        self._skill_snapshot = {
+            s.student_id: {sk.value: v for sk, v in s.skills.items()}
+            for s in self.students
+        }
+
         # Journal entries (start-of-day prospective)
         for student in self.students:
             # Find crush name if student has one
@@ -682,6 +708,92 @@ class GameState:
                 student.journal.append(entry)
 
         return log
+
+    def compute_school_stats(self) -> dict:
+        """Compute school-wide averages for skills and mood.
+
+        Returns a dict with:
+          skills: {skill_name: avg_value}
+          mood: avg_mood_value
+          moods: [(name, mood_name, mood_value), ...]
+        """
+        from .models import Skill
+        _DISPLAY_SKILLS = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
+        n = len(self.students) or 1
+
+        skill_avgs = {}
+        for skill in _DISPLAY_SKILLS:
+            total = sum(s.skills.get(skill, 0.0) for s in self.students)
+            skill_avgs[skill.value] = round(total / n, 1)
+
+        mood_avg = round(sum(s.mood_value for s in self.students) / n, 1)
+        moods = [(s.name, s.mood.name, int(s.mood_value)) for s in self.students]
+
+        return {
+            "skills": skill_avgs,
+            "mood": mood_avg,
+            "moods": moods,
+        }
+
+    def _build_day_summary(self, day_points: int, log: list[str]) -> dict:
+        """Build a structured summary of today's activity for the UI."""
+        from .clock import get_season
+        from .models import Skill
+        day = self.clock.day
+        season = get_season(day)
+
+        # School-wide skill averages (current)
+        stats = self.compute_school_stats()
+
+        # Compute school-wide skill deltas from snapshot
+        _DISPLAY_SKILLS = [Skill.ACADEMICS, Skill.ATHLETICS, Skill.CREATIVITY, Skill.SOCIAL, Skill.MUSIC]
+        n = len(self.students) or 1
+        skill_deltas: dict[str, float] = {}
+        for skill in _DISPLAY_SKILLS:
+            prev_total = sum(
+                self._skill_snapshot.get(s.student_id, {}).get(skill.value, 0.0)
+                for s in self.students
+            )
+            prev_avg = prev_total / n
+            current_avg = stats["skills"][skill.value]
+            delta = round(current_avg - prev_avg, 1)
+            if abs(delta) >= 0.1:
+                skill_deltas[skill.value] = delta
+
+        # Relationship changes (scan log for friendship/romance messages)
+        rel_changes: list[str] = []
+        for msg in log:
+            if any(kw in msg.lower() for kw in ["crush", "dating", "friend", "best friend", "close friend"]):
+                if "journal" not in msg.lower():
+                    rel_changes.append(msg)
+
+        # Conversations (conflicts and matches)
+        conversations: list[str] = []
+        for msg in log:
+            if any(kw in msg.lower() for kw in ["conflict", "match", "chatted", "argued", "snapped"]):
+                conversations.append(msg)
+
+        # Event countdown
+        event_info = None
+        if self.scheduled_event:
+            event_info = {
+                "name": self.scheduled_event.event_name,
+                "days_remaining": self.scheduled_event.days_remaining,
+            }
+
+        return {
+            "day": day,
+            "season": season,
+            "weather": self.current_weather.value,
+            "tomorrow_weather": self.current_weather.value,  # already rolled
+            "points_today": day_points,
+            "points_total": self.total_points,
+            "school_stats": stats,
+            "skill_deltas": skill_deltas,
+            "rel_changes": rel_changes,
+            "conversations": conversations,
+            "event_info": event_info,
+        }
 
     def _report_card(self) -> list[str]:
         """Issue report cards for all students. Returns log messages."""

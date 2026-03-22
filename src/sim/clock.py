@@ -11,6 +11,22 @@ TICKS_PER_DAY: int = 84  # 14 hours * 6 ticks/hour (default)
 MINUTES_PER_TICK: int = 10
 DAY_START_HOUR: int = 8  # 8:00 AM
 
+# Seasons: 10 game days each, 40 days per school year
+DAYS_PER_SEASON: int = 10
+SEASONS = ("fall", "winter", "spring", "summer")
+
+
+def get_season(day: int) -> str:
+    """Get the current season name from the game day number."""
+    # Day 1-10: fall, 11-20: winter, 21-30: spring, 31-40: summer, then repeats
+    season_idx = ((day - 1) // DAYS_PER_SEASON) % len(SEASONS)
+    return SEASONS[season_idx]
+
+
+def get_season_day(day: int) -> int:
+    """Day within the current season (1-10)."""
+    return ((day - 1) % DAYS_PER_SEASON) + 1
+
 
 @dataclass
 class GameClock:
@@ -64,6 +80,11 @@ class GameClock:
         if display_h == 0:
             display_h = 12
         return f"{self.weekday_str} {display_h}:{m:02d}{period}"
+
+    @property
+    def season(self) -> str:
+        """Current season: fall, winter, spring, summer."""
+        return get_season(self.day)
 
     @property
     def is_day_over(self) -> bool:

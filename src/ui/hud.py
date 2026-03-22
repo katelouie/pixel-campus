@@ -150,18 +150,35 @@ def _load_time_weather_icons() -> dict[str, arcade.Texture]:
     return icons
 
 
-def _tick_to_time_phase(tick: int) -> str:
-    """Map a game tick (0-84) to a time-of-day phase name."""
+def _tick_to_time_phase(tick: int, season: str = "spring") -> str:
+    """Map a game tick (0-84) to a time-of-day phase name, adjusted by season.
+
+    Winter: sunset starts earlier (hour 14), evening by 16.
+    Summer: sunset pushes late (hour 18), long bright afternoons.
+    Spring/Fall: in between.
+    """
     hour = 8 + (tick * 10 // 60)
-    if hour < 10:
+
+    # Season-adjusted thresholds: (dawn_end, morning_end, afternoon_end, sunset_end, evening_end)
+    _SEASON_THRESHOLDS = {
+        "winter": (10, 11, 14, 16, 18),
+        "fall":   (10, 12, 15, 17, 19),
+        "spring": (10, 12, 15, 17, 19),
+        "summer": ( 9, 12, 16, 18, 20),
+    }
+    dawn_end, morning_end, afternoon_end, sunset_end, evening_end = _SEASON_THRESHOLDS.get(
+        season, (10, 12, 15, 17, 19)
+    )
+
+    if hour < dawn_end:
         return "dawn"
-    if hour < 12:
+    if hour < morning_end:
         return "morning"
-    if hour < 15:
+    if hour < afternoon_end:
         return "afternoon"
-    if hour < 17:
+    if hour < sunset_end:
         return "sunset"
-    if hour < 19:
+    if hour < evening_end:
         return "evening"
     return "night"
 
@@ -351,7 +368,7 @@ class HUD:
             from src.sim.personality import Weather as _Weather
             tick = state.clock.tick
             weather = state.current_weather
-            time_phase = _tick_to_time_phase(tick)
+            time_phase = _tick_to_time_phase(tick, state.clock.season)
             if weather in (_Weather.SUNNY, _Weather.WINDY, _Weather.SNOW):
                 icon_key = f"time_{time_phase}"
             else:
@@ -391,9 +408,10 @@ class HUD:
                                 label_tex.width, label_tex.height),
                 )
 
+            season_label = state.clock.season.capitalize()
             clock_str = (
-                f"{state.clock.day_time_str}  |  "
-                f"Points: {state.total_points}/{state.graduation_target}"
+                f"{state.clock.day_time_str}  |  {season_label}  |  "
+                f"Points: {state.total_points}"
             )
             clock_tex = self._font.get_texture(clock_str)
             self._clock_sprite.texture = clock_tex

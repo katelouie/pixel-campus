@@ -44,10 +44,26 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - **The Big Party**: special event — choose a host student, invitations sent based on friendship, romance, traits, and compatibility. Accept/reject per student. Pass/fail based on 60% attendance.
   - **Event Results Modal** (`views/event_results.py`): full-screen pass/fail display with team stats, MVP, per-student breakdown, or party attendance.
   - **Event Menu** (`views/event_menu.py`): shows all events with status (Available/Scheduled/Completed), point costs, cancel with 50% refund, party host selection.
-  - Auto-run pauses when events fire. Graduation requires 5/7 events completed.
-  - `GameState` gains `scheduled_event`, `completed_events`, `school_year` fields, all serialized.
+
+- **Day/night lighting overlay**: fullscreen color tint shifts with time of day — warm gold at dawn, clear at midday, amber afternoon, orange sunset, blue-purple evening, deep night blue. Drawn over the campus but under the HUD so UI stays readable. Season-aware (see below).
+
+- **Season system** (`clock.py`): 40-day school year cycling through Fall → Winter → Spring → Summer (10 days each).
+  - **Daylight shifts by season**: winter sunsets start at 2pm (campus goes blue-purple by end of school), summer stays bright all day. Same school day, different atmosphere.
+  - **Weather weighted by season**: winter is cloudy/rainy/snowy, summer is mostly sunny. Driven by weighted random rolls.
+  - **Season displayed in HUD**: "Mon 2:30p | Winter | Points: 45".
+
+- **Day summary screen** (`views/day_summary.py`): end-of-day modal showing the day's recap.
+  - Day number + season title, weather, points earned.
+  - School-wide skill averages with deltas: "Athletics: 12.3 (+1.8)" in green for gains.
+  - Average mood.
+  - Relationship changes (crushes, friendship level-ups, dating).
+  - Conversation highlights (conflicts, matches).
+  - Event countdown if scheduled. Tomorrow's forecast.
+  - Auto-run pauses for the summary. Click or press any key to continue.
+  - `compute_school_stats()` method on GameState — reusable for future persistent HUD sidebar.
 
 ### Changed
+- **HUD points display**: removed "/800" graduation target (graduation is now event-based, not point-based).
 - **Minimap position**: moved from below HUD banner to top-right corner of screen.
 - **Profile tab strip**: tab widths now responsive to label length + padding instead of fixed 110px.
 - **Relationships tab layout**: rows expanded to fit portrait heads, columns shifted right to accommodate. All 9 students fit with 50px row height.
