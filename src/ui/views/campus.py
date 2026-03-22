@@ -301,6 +301,7 @@ class CampusView(arcade.View):
 
         # --- Morning dispatch: send every student somewhere at startup ---
         self._dispatch_morning()
+        self._sync_sprites_to_sim()
 
         # --- HUD ---
         self._hud = HUD(self.window.width, self.window.height)
@@ -906,8 +907,26 @@ class CampusView(arcade.View):
             return
         self._state._day_summary = None
 
+        # Reset sprites to spawn points for the new day
+        self._reset_sprites_to_spawn()
+        self._dispatch_morning()
+        self._sync_sprites_to_sim()
+
         from src.ui.views.day_summary import DaySummaryView
         self.window.show_view(DaySummaryView(summary, self))
+
+    def _reset_sprites_to_spawn(self) -> None:
+        """Teleport all student sprites back to spawn points for a new day."""
+        for i, student in enumerate(self._state.students):
+            sprite = self._student_sprites.get(student.student_id)
+            if not sprite:
+                continue
+            sp = self._spawn_points[i % len(self._spawn_points)]
+            sprite.center_x = sp[0] + random.uniform(-10, 10)
+            sprite.center_y = sp[1] + random.uniform(-6, 6)
+            sprite.stop()
+            self._release_sit_point(student.student_id)
+        self._prev_destinations = {s.student_id: None for s in self._state.students}
 
     def _check_pending_event(self) -> None:
         """If an event countdown just hit zero, show the results modal."""
